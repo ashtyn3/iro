@@ -5,6 +5,7 @@ import * as immutable from "immutable";
 import { Vec2d } from "./state";
 import type { Item } from "./inventory";
 import { applyMixins, type AddedOf, type Component, type ParamsOf, type UnionToIntersection } from "./comps";
+import { VIEWPORT } from "./map";
 
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
@@ -84,11 +85,9 @@ export const Movable: Component<Movable, Vec2d> = (base, init) => {
         const newPositionKey = Vec2d({ x: newX, y: newY }); // Create new Immutable Vec2d Record for potential new key
 
 
-        // Boundary/collision checks
         if (newY >= e.engine.height || newX >= e.engine.width || newX < 0 || newY < 0) return;
         if (e.engine.mapBuilder.tiles[newX][newY].boundary) return;
 
-        // If position hasn't logically changed (e.g., delta was {0,0})
         if (oldPositionKey.equals(newPositionKey)) {
             return;
         }
@@ -124,13 +123,12 @@ export const Collectable: Component<Collectable, {}> =
     (base) => {
         // cast once to the widened type
         const e = base as Entity & Collectable
-        e.collect = function(item: Item, amount: number): boolean {
+        e.collect = function (item: Item, amount: number): boolean {
             for (let i = 0; i < base.engine.player.Items.length; i++) {
                 const slot = base.engine.player.Items[i];
                 if (slot !== undefined) {
                     if (slot.item && slot.item.name === item.name) {
                         slot.count += amount;
-                        console.log("hi")
                         base.engine.player.update()
                         return true;
                     }
@@ -200,8 +198,8 @@ export function promote(e: Engine, pos: Vec2d, params?: { [key: string]: any }):
     let entity: Entity = Entity(e, tile.char, tile.fg, tile.bg);
     let builder = new EntityBuilder(entity)
 
-    if (tile.promotable) {
-        tile.promotable.type.split(",").forEach((t) => {
+    const make_entity = (type: string) => {
+        type.split(",").forEach((t) => {
             switch (t) {
                 case 'collectable':
                     builder.add(Collectable, {})
@@ -212,7 +210,13 @@ export function promote(e: Engine, pos: Vec2d, params?: { [key: string]: any }):
             }
         })
     }
-    e.state.entities = e.state.entities.set(pos, entity);
-    return builder.build(); // Return the created entity
+    if (tile.mask) {
+        if (tile.mask.promotable) {
+            make_entity(tile.mask.promotable.type)
+        } else if (tile.promotable) {
+            make_entity(tile.promotable.type)
+        }
+        e.state.entities = e.state.entities.set(pos, entity);
+        return builder.build();
+    }
 }
-

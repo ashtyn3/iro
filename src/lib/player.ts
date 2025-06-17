@@ -10,7 +10,7 @@ export const Player = (e: Engine, char: string, dominant: "left" | "right") => {
     let builder = new EntityBuilder(data)
     let built = builder.add(Movable, Vec2d({ x: 4, y: 10 }))
         .add(Inventory, { slots: 5, dominant: dominant })
-        .add(Syncable, {})
+        .add(Syncable, "player")
         .add(Air, {}).build()
     built.render = () => {
         const vp = e.viewport()

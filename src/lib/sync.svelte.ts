@@ -2,6 +2,7 @@ import { SvelteMap } from "svelte/reactivity";
 import type { Component } from "./comps";
 import type { Entity } from "./entity";
 import type { State } from "./state";
+import { useConvexClient } from "convex-svelte";
 
 // export let syncable = $state<{ s: State }>({ s: null })
 //
@@ -22,7 +23,6 @@ export const Syncable: Component<Syncable, string> = (base, init) => {
     e.sink = () => sinkMap.get(init)!
 
     e.update = () => {
-        console.log(e)
         sinkMap.set(init, { ...e });
     };
     return e

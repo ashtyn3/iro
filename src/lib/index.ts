@@ -8,6 +8,7 @@ import { Syncable } from "./sync.svelte";
 import { Inventory } from "./inventory";
 import * as immutable from "immutable";
 import type { Movable } from "./entity";
+import type { ConvexClient } from "convex/browser";
 
 export class Engine {
     width: number;
@@ -20,13 +21,15 @@ export class Engine {
     engine: ROT.Engine;
     state: State
     clock: number
+    convex: ConvexClient
 
-    constructor(w: number, h: number) {
+    constructor(w: number, h: number, convex: ConvexClient) {
         this.width = w;
         this.height = h;
+        this.convex = convex
 
-        const TILES_X = 80;
-        const TILES_Y = 40;
+        const TILES_X = VIEWPORT.x;
+        const TILES_Y = VIEWPORT.y;
         const FONT_PX = 18;
 
         this.display = new ROT.Display({
@@ -37,7 +40,7 @@ export class Engine {
             forceSquareRatio: true,
         });
 
-        this.mapBuilder = new GMap(this.width, this.height, this);
+        this.mapBuilder = new GMap(this.width, this.height, this, this.convex);
         if (navigator.gpu) {
             this.mapBuilder.useGPU = true
         }

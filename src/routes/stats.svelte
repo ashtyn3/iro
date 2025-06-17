@@ -1,13 +1,17 @@
 <script lang="ts">
     const { sink } = $props();
+    const sync = $derived(sink.sink());
+    let items = $state(sync.Items);
+    let air = $state(sync.air);
     $effect(() => {
-        console.log(sink.sink());
+        items = sync.Items;
+        air = sync.air;
     });
 </script>
 
 <div id="stats">
-    <p id="air">{sink.sink().air || 0}% AIR</p>
-    {#each sink.sink().Items as item}
+    <p id="air">{air || 0}% AIR</p>
+    {#each items as item}
         {#if item !== undefined}
             {item.item.name}x{item.count}
         {/if}

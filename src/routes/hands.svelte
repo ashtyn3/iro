@@ -1,15 +1,16 @@
 <script lang="ts">
-    // import { syncable } from "$lib/sync.svelte";
+    const { sink } = $props();
+    const sync = $derived(sink.sink());
 </script>
 
-<!-- <div id="hands"> -->
-<!--     <div> -->
-<!--         <img src={syncable?.s?.inventory.hands.left.sprite[0]} width="60" /> -->
-<!--     </div> -->
-<!--     <div> -->
-<!--         <img src={syncable?.s?.inventory.hands.right.sprite[1]} width="60" /> -->
-<!--     </div> -->
-<!-- </div> -->
+<div id="hands">
+    <div>
+        <img src={sync?.hands.left.sprite[0]} width="60" />
+    </div>
+    <div>
+        <img src={sync?.hands.right.sprite[1]} width="60" />
+    </div>
+</div>
 
 <style>
     #hands {

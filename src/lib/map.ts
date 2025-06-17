@@ -3,6 +3,7 @@ import type { Engine } from "./index";
 import { createNoise2D } from "simplex-noise";
 import { DB } from "./state";
 import { GPURenderer } from "./gpu";
+import type { ConvexClient } from "convex/browser";
 
 export const COLORS = {
     grass: {
@@ -58,7 +59,7 @@ export const enum TileKinds {
     tree
 }
 
-export const VIEWPORT: Vec2d = { x: 120, y: 55 };
+export const VIEWPORT: Vec2d = { x: 80, y: 40 };
 
 export type Cluster = {
     kind: TileKinds;
@@ -80,7 +81,7 @@ export interface Tile {
     char: string;
     boundary: boolean;
     kind: TileKinds
-    mask: { fg: string; bg: string; char: string, kind: TileKinds } | null;
+    mask: { fg: string; bg: string; char: string, kind: TileKinds, promotable: promotion } | null;
     promotable?: promotion
 }
 
@@ -93,9 +94,10 @@ export class GMap {
     computedClusters: Clusters;
     gpu: GPURenderer
     useGPU: boolean
-    mapId: number
+    mapId: string
+    convex: ConvexClient
 
-    constructor(w: number, h: number, e: Engine, id: number = 1) {
+    constructor(w: number, h: number, e: Engine, convex: ConvexClient, id: string) {
         this.mapId = id
         this.gpu = new GPURenderer()
         this.useGPU = false
@@ -103,6 +105,7 @@ export class GMap {
         this.height = h;
         this.engine = e;
         this.tiles = []
+        this.convex = convex
         this.computedClusters = {
             [TileKinds.grass]: [],
             [TileKinds.water]: [],
@@ -126,33 +129,33 @@ export class GMap {
             height: VIEWPORT.y
         };
     }
-    async updateViewportTiles(newTiles: Tile[][]): Promise<void> {
-        const viewport = this.getViewport();
-
-        // Validate dimensions
-        if (newTiles.length !== viewport.width ||
-            newTiles.some(row => row.length !== viewport.height)) {
-            throw new Error("New tiles dimensions don't match viewport");
-        }
-
-        // Update local tiles array
-        for (let vx = 0; vx < viewport.width; vx++) {
-            for (let vy = 0; vy < viewport.height; vy++) {
-                const worldX = viewport.x + vx;
-                const worldY = viewport.y + vy;
-
-                if (worldX < this.width && worldY < this.height) {
-                    this.tiles[worldX][worldY] = newTiles[vx][vy];
-                }
-            }
-        }
-
-        // Update database if tiles were loaded from DB
-        if (this.mapId) {
-            const db = new DB();
-            await db.updateVisibleTiles(this.mapId, viewport, newTiles);
-        }
-    }
+    // async updateViewportTiles(newTiles: Tile[][]): Promise<void> {
+    //     const viewport = this.getViewport();
+    //
+    //     // Validate dimensions
+    //     if (newTiles.length !== viewport.width ||
+    //         newTiles.some(row => row.length !== viewport.height)) {
+    //         throw new Error("New tiles dimensions don't match viewport");
+    //     }
+    //
+    //     // Update local tiles array
+    //     for (let vx = 0; vx < viewport.width; vx++) {
+    //         for (let vy = 0; vy < viewport.height; vy++) {
+    //             const worldX = viewport.x + vx;
+    //             const worldY = viewport.y + vy;
+    //
+    //             if (worldX < this.width && worldY < this.height) {
+    //                 this.tiles[worldX][worldY] = newTiles[vx][vy];
+    //             }
+    //         }
+    //     }
+    //
+    //     // Update database if tiles were loaded from DB
+    //     if (this.mapId) {
+    //         const db = new DB(this.convex);
+    //         await db.updateVisibleTiles(this.mapId, viewport, newTiles);
+    //     }
+    // }
     async updateViewportTile(
         viewportX: number,
         viewportY: number,
@@ -171,7 +174,7 @@ export class GMap {
 
         // Update database
         if (this.mapId) {
-            const db = new DB();
+            const db = new DB(this.convex);
             await db.updateViewportTiles(this.mapId, viewport, [
                 { x: viewportX, y: viewportY, tile: newTile }
             ]);
@@ -267,8 +270,8 @@ export class GMap {
         return true;
     }
 
-    public async loadMap(id: number): Promise<boolean> {
-        let db = new DB()
+    public async loadMap(id: string): Promise<boolean> {
+        let db = new DB(this.convex)
         this.tiles = await db.loadTiles(id)
         this.computedClusters = await db.loadClusters(id)
         this.buildClusterIndex()
@@ -277,9 +280,11 @@ export class GMap {
 
     async buildClusters() {
         this.computedClusters = await this.findClusters()
-        let db = new DB()
-        await db.saveTiles(this.tiles)
-        await db.saveClusters(this.computedClusters)
+        console.log("done workers")
+        let db = new DB(this.convex)
+        const id = await db.saveTiles(this.tiles)
+        this.mapId = id
+        await db.saveClusters(id, this.computedClusters)
         this.buildClusterIndex()
     }
 
@@ -510,8 +515,7 @@ export class GMap {
         }
 
         // 3. Save the updated clusters object to the database
-        const db = new DB();
-        // We need a way to UPDATE the clusters for the current mapId.
+        const db = new DB(this.convex);
         await db.updateClusters(this.mapId, this.computedClusters);
         console.log(`Updated clusters in database for mapId: ${this.mapId}`);
     }

@@ -15,17 +15,17 @@ export const Items: { [key: string]: Item } = {
     empty: {
         name: "None",
         sprite: ["", ""],
-        perform: async function(e: Engine, actor: Entity): Promise<void> {
+        perform: async function (e: Engine, actor: Entity): Promise<void> {
             return
         }
     },
     hand: {
         name: "Hand",
         sprite: [(await import("$lib/assets/hand.png")).default, (await import("$lib/assets/hand-r.png")).default],
-        perform: async function(e: Engine, actor: Movable): Promise<void> {
+        perform: async function (e: Engine, actor: Movable): Promise<void> {
             if (e.state.currentCluster?.kind == TileKinds.tree) {
                 const tile = e.mapBuilder.tiles[actor.position.x][actor.position.y];
-                let positionKey = Vec2d(e.state.currentCluster.center); // Convert once and reuse
+                let positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
 
                 if (!e.state.entities.has(positionKey)) {
                     promote(e, positionKey);
@@ -52,16 +52,20 @@ export const Items: { [key: string]: Item } = {
                         }
                     }
 
-                    for (const up of tileUpdates) {
-                        await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile)
-                        await e.mapBuilder.removeCluster(e.state.currentCluster);
-                    }
-
-                    e.state.entities = e.state.entities.delete(positionKey);
                     entity.collect(
                         Items.wood,
                         Math.trunc((Math.random() * 5) + 1)
                     );
+                    e.state.entities = e.state.entities.delete(positionKey);
+                    for (const up of tileUpdates) {
+                        e.engine._scheduler.add({
+                            act: async () => {
+                                await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile)
+                                await e.mapBuilder.removeCluster(e.state.currentCluster!);
+                            }
+                        }, false)
+                    }
+
                 }
             }
         }
@@ -69,7 +73,7 @@ export const Items: { [key: string]: Item } = {
     wood: {
         name: "wood",
         sprite: ["", ""],
-        perform: async function(e: Engine, actor: Entity): Promise<void> {
+        perform: async function (e: Engine, actor: Entity): Promise<void> {
             throw new Error("Function not implemented.")
         }
     }

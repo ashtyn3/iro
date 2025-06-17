@@ -1,9 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import type { Cluster, Clusters, Tile } from './map';
-import type { Inventory } from './inventory';
 import type { Entity, Movable } from './entity';
 import * as immutable from 'immutable';
-import { Engine } from '$lib/index';
+import { api } from '../convex/_generated/api';
+import type { ConvexClient } from 'convex/browser';
 
 export interface IVec2d {
     x: number;
@@ -49,9 +49,9 @@ export interface ClustersSchema {
 }
 
 export interface TilesSchema {
-    id?: number;
+    id?: string;
     tiles_data: string;
-    created: Date
+    createdAt: string
 }
 
 export interface TileChunksSchema {
@@ -85,51 +85,59 @@ export class IroDB extends Dexie {
     }
 }
 
+function makeBlocks(
+    tiles: Tile[][],
+    blockSize: number
+): Array<{ blockX: number; blockY: number; data: Tile[][] }> {
+    const w = tiles.length;
+    const h = tiles[0].length;
+    const blocks = [];
+    const blocksX = Math.ceil(w / blockSize);
+    const blocksY = Math.ceil(h / blockSize);
+
+    for (let bx = 0; bx < blocksX; bx++) {
+        for (let by = 0; by < blocksY; by++) {
+            const data: Tile[][] = [];
+            for (let i = 0; i < blockSize; i++) {
+                const x = bx * blockSize + i;
+                if (x >= w) break;
+                data[i] = [];
+                for (let j = 0; j < blockSize; j++) {
+                    const y = by * blockSize + j;
+                    if (y >= h) break;
+                    data[i][j] = tiles[x][y];
+                }
+            }
+            blocks.push({ blockX: bx, blockY: by, data });
+        }
+    }
+    return blocks;
+}
 export class DB {
     private db: IroDB;
     private readonly CHUNK_SIZE = 1000; // Adjust based on your needs
 
-    constructor() {
+    constructor(private client: ConvexClient) {
         this.db = new IroDB();
     }
 
-    async saveTiles(tiles: Tile[][]): Promise<number> {
-        const width = tiles.length;
-        const height = tiles[0]?.length || 0;
+    async saveTiles(tiles: Tile[][]): Promise<string> {
+        console.log("saving")
+        const tileSetId = await this.client.mutation(api.functions.saveTileSet.createTileSet, {
+            width: tiles.length,
+            height: tiles[0].length
+        })
+        const allBlocks = makeBlocks(tiles, 40);
 
-        // Flatten the 2D array
-        const flattened = tiles.flat();
-
-        // Create main record
-        const mainId = await this.db.tiles.add({
-            created: new Date(),
-            tiles_data: JSON.stringify({
-                width,
-                height,
-                total_tiles: flattened.length,
-                chunked: true,
-            }),
-        });
-
-        // Save in smaller chunks
-        const chunkPromises = [];
-        for (let i = 0; i < flattened.length; i += this.CHUNK_SIZE) {
-            const chunk = flattened.slice(i, i + this.CHUNK_SIZE);
-            const chunkIndex = Math.floor(i / this.CHUNK_SIZE);
-
-            chunkPromises.push(
-                this.db.tile_chunks.add({
-                    main_id: mainId,
-                    chunk_index: chunkIndex,
-                    chunk_data: JSON.stringify(chunk),
-                })
-            );
+        const BATCH = 20;
+        for (let i = 0; i < allBlocks.length; i += BATCH) {
+            const batch = allBlocks.slice(i, i + BATCH);
+            await this.client.mutation(api.functions.saveTileSet.insertTileBlocks, {
+                tileSetId,
+                blocks: batch,
+            });
         }
-
-        await Promise.all(chunkPromises);
-
-        console.log('wrote tiles at:', mainId);
-        return mainId;
+        return tileSetId
     }
 
     async importAll(file: File) {
@@ -169,6 +177,9 @@ export class DB {
         }
     }
 
+    async clear() {
+        await this.client.mutation(api.functions.saveTileSet.clearUserData, {})
+    }
     // Helper function for decompression
     private async decompressGzip(compressedBuffer: ArrayBuffer): Promise<ArrayBuffer> {
         const decompressor = new DecompressionStream("gzip");
@@ -178,256 +189,32 @@ export class DB {
         return await new Response(decompressor.readable).arrayBuffer();
     }
 
-    async saveClusters(clusters: Clusters): Promise<number> {
-        try {
-            const id = await this.db.clusters.add({
-                clusters_data: JSON.stringify(clusters),
-            });
-            return id;
-        } catch (error) {
-            console.error('Error saving clusters:', error);
-            throw error;
-        }
-    }
-
-    async loadClusters(id: number): Promise<Clusters | null> {
-        try {
-            const record = await this.db.clusters.get(id);
-
-            if (!record) {
-                console.log('No clusters found with id:', id);
-                return null;
-            }
-
-            return JSON.parse(record.clusters_data);
-        } catch (error) {
-            console.error('Error loading clusters:', error);
-            return null;
-        }
-    }
-
-    async loadTiles(id: number): Promise<Tile[][]> {
-        // Get metadata
-        const root = await this.db.tiles.get(id);
-        if (!root) {
-            throw new Error(`No tiles found with id: ${id}`);
-        }
-
-        const { width, height } = JSON.parse(root.tiles_data);
-
-        // Get all chunks
-        const chunks = await this.db.tile_chunks
-            .where('main_id')
-            .equals(id)
-            .sortBy("chunk_index");
-
-        const flattened: Tile[] = [];
-        for (const chunk of chunks) {
-            const chunkData = JSON.parse(chunk.chunk_data);
-            flattened.push(...chunkData);
-        }
-
-        const result: Tile[][] = [];
-        for (let i = 0; i < width; i++) {
-            result[i] = flattened.slice(i * height, (i + 1) * height);
-        }
-
-        return result;
-    }
-
-    // Helper methods for additional functionality
-    async getAllClusters(): Promise<ClustersSchema[]> {
-        return await this.db.clusters.toArray();
-    }
-
-    async getAllTiles(): Promise<TilesSchema[]> {
-        return await this.db.tiles.toArray();
-    }
-
-    async deleteClusters(id: number): Promise<void> {
-        await this.db.clusters.delete(id);
-    }
-
-    async deleteTiles(id: number): Promise<void> {
-        // Delete main record and all associated chunks
-        await this.db.transaction('rw', [this.db.tiles, this.db.tile_chunks], async () => {
-            await this.db.tiles.delete(id);
-            await this.db.tile_chunks.where('main_id').equals(id).delete();
-        });
-    }
-    async exportAll() {
-        const tiles = await this.getAllTiles()
-        const f_json = { tile_sets: [], clusters: [] }
-        for (const i in tiles) {
-            const tile = tiles[i]
-            const data = await this.loadTiles(tile.id as number)
-            const cl_data = await this.loadClusters(tile.id as number)
-            f_json.tile_sets.push(data)
-            f_json.clusters.push(cl_data)
-        }
-        const compressor = new CompressionStream("gzip")
-        const writer = compressor.writable.getWriter()
-        const encoded = new TextEncoder().encode(JSON.stringify(f_json))
-        writer.write(encoded)
-        writer.close()
-        const compressed = await new Response(compressor.readable).arrayBuffer()
-        const blob = new Blob([compressed], { type: 'application/gzip' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'database-backup.gz';
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    async clearAll(): Promise<void> {
-        await this.db.transaction('rw', [this.db.clusters, this.db.tiles, this.db.tile_chunks], async () => {
-            await this.db.clusters.clear();
-            await this.db.tiles.clear();
-            await this.db.tile_chunks.clear();
+    async saveClusters(
+        tileSetId: string,
+        clusters: Clusters
+    ): Promise<string> {
+        return this.client.mutation(api.functions.clusters.saveClusters, {
+            tileSetId: tileSetId,
+            clusters: clusters,
         });
     }
 
-    async updateClusters(id: number, clusters: Clusters): Promise<void> {
-        try {
-            // Use .update() to modify the record with the matching primary key (id).
-            // This is far more efficient and correct than adding new records.
-            const count = await this.db.clusters.update(id, {
-                clusters_data: JSON.stringify(clusters),
-            });
-
-            if (count === 0) {
-                // If no record was updated (e.g., it was deleted), add it back.
-                console.warn(`No cluster record found for id ${id}. Creating a new one.`);
-                await this.db.clusters.add({
-                    id: id, // Explicitly set the ID to match the tileset
-                    clusters_data: JSON.stringify(clusters)
-                });
-            }
-        } catch (error) {
-            console.error('Error updating clusters:', error);
-            throw error;
-        }
+    async loadClusters(id: string): Promise<Clusters | null> {
+        return this.client.query(api.functions.clusters.loadClusters, { tileSetId: id });
     }
 
-    async updateTileChunk(
-        mainId: number,
-        chunkIndex: number,
-        newChunkData: Tile[]
+    async updateClusters(
+        clusterId: string,
+        clusters: Clusters
     ): Promise<void> {
-        const chunk = await this.db.tile_chunks
-            .where(["main_id", "chunk_index"])
-            .equals([mainId, chunkIndex])
-            .first();
-
-        if (!chunk) {
-            throw new Error(
-                `No chunk found with main_id: ${mainId}, chunk_index: ${chunkIndex}`
-            );
-        }
-
-        await this.db.tile_chunks.update(chunk.id!, {
-            chunk_data: JSON.stringify(newChunkData),
+        await this.client.mutation(api.functions.clusters.updateClusters, {
+            tileSetId: clusterId,
+            clusters,
         });
     }
-    async updateVisibleTiles(
-        id: number,
-        viewport: {
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-        },
-        newTiles: Tile[][]
-    ): Promise<void> {
-        const root = await this.db.tiles.get(id);
-        if (!root) {
-            throw new Error(`No tiles found with id: ${id}`);
-        }
 
-        const metadata = JSON.parse(root.tiles_data);
-        const { width: totalWidth, height: totalHeight } = metadata;
-
-        // Validate viewport bounds
-        if (
-            viewport.x < 0 ||
-            viewport.y < 0 ||
-            viewport.x + viewport.width > totalWidth ||
-            viewport.y + viewport.height > totalHeight
-        ) {
-            throw new Error("Viewport bounds exceed tile dimensions");
-        }
-
-        // Validate new tiles dimensions
-        if (
-            newTiles.length !== viewport.width ||
-            newTiles.some(row => row.length !== viewport.height)
-        ) {
-            throw new Error("New tiles dimensions don't match viewport size");
-        }
-
-        // Calculate which chunks contain viewport tiles
-        const affectedChunks = new Map<number, {
-            id: any;
-            data: Tile[];
-            modified: boolean;
-        }>();
-
-        // Process each tile in the viewport
-        for (let viewportX = 0; viewportX < viewport.width; viewportX++) {
-            for (let viewportY = 0; viewportY < viewport.height; viewportY++) {
-                const actualX = viewport.x + viewportX;
-                const actualY = viewport.y + viewportY;
-
-                // Convert 2D coordinates to flat index
-                const flatIndex = actualX * totalHeight + actualY;
-                const chunkIndex = Math.floor(flatIndex / this.CHUNK_SIZE);
-                const positionInChunk = flatIndex % this.CHUNK_SIZE;
-
-                // Lazy load chunk data if not already loaded
-                if (!affectedChunks.has(chunkIndex)) {
-                    const chunk = await this.db.tile_chunks
-                        .where(["main_id", "chunk_index"])
-                        .equals([id, chunkIndex])
-                        .first();
-
-                    if (chunk) {
-                        affectedChunks.set(chunkIndex, {
-                            id: chunk.id,
-                            data: JSON.parse(chunk.chunk_data),
-                            modified: false
-                        });
-                    } else {
-                        throw new Error(`Chunk ${chunkIndex} not found`);
-                    }
-                }
-
-                // Update the specific tile
-                const chunkInfo = affectedChunks.get(chunkIndex)!;
-                chunkInfo.data[positionInChunk] = newTiles[viewportX][viewportY];
-                chunkInfo.modified = true;
-            }
-        }
-
-        // Save only the modified chunks
-        const updatePromises = [];
-        for (const chunkInfo of affectedChunks.values()) {
-            if (chunkInfo.modified) {
-                updatePromises.push(
-                    this.db.tile_chunks.update(chunkInfo.id, {
-                        chunk_data: JSON.stringify(chunkInfo.data),
-                    })
-                );
-            }
-        }
-
-        await Promise.all(updatePromises);
-        console.log(`Updated ${updatePromises.length} chunks for viewport at (${viewport.x}, ${viewport.y})`);
-    }
-
-    // Update only specific tiles within the viewport
     async updateViewportTiles(
-        id: number,
+        tileSetId: string,
         viewport: {
             x: number;
             y: number;
@@ -440,153 +227,47 @@ export class DB {
             tile: Tile;
         }>
     ): Promise<void> {
-        const root = await this.db.tiles.get(id);
-        if (!root) {
-            throw new Error(`No tiles found with id: ${id}`);
-        }
-
-        const metadata = JSON.parse(root.tiles_data);
-        const { width: totalWidth, height: totalHeight } = metadata;
-
-        const affectedChunks = new Map<number, {
-            id: any;
-            data: Tile[];
-            modified: boolean;
-        }>();
-
-        // Process each tile update
-        for (const update of tileUpdates) {
-            // Validate relative position
-            if (
-                update.x < 0 ||
-                update.y < 0 ||
-                update.x >= viewport.width ||
-                update.y >= viewport.height
-            ) {
-                throw new Error(`Tile update position (${update.x}, ${update.y}) is outside viewport`);
+        await this.client.mutation(
+            api.functions.saveTileSet.updateViewportTiles,
+            {
+                tileSetId,
+                viewport: { x: viewport.x, y: viewport.y, width: viewport.width, height: viewport.width },
+                blockSize: 40,
+                tileUpdates, // [{ x, y, tile }, …]
             }
-
-            const actualX = viewport.x + update.x;
-            const actualY = viewport.y + update.y;
-
-            // Validate actual position
-            if (actualX >= totalWidth || actualY >= totalHeight) {
-                throw new Error(`Tile position (${actualX}, ${actualY}) exceeds grid bounds`);
-            }
-
-            const flatIndex = actualX * totalHeight + actualY;
-            const chunkIndex = Math.floor(flatIndex / this.CHUNK_SIZE);
-            const positionInChunk = flatIndex % this.CHUNK_SIZE;
-
-            // Lazy load chunk data
-            if (!affectedChunks.has(chunkIndex)) {
-                const chunk = await this.db.tile_chunks
-                    .where(["main_id", "chunk_index"])
-                    .equals([id, chunkIndex])
-                    .first();
-
-                if (chunk) {
-                    affectedChunks.set(chunkIndex, {
-                        id: chunk.id,
-                        data: JSON.parse(chunk.chunk_data),
-                        modified: false
-                    });
-                } else {
-                    throw new Error(`Chunk ${chunkIndex} not found`);
-                }
-            }
-
-            // Update the specific tile
-            const chunkInfo = affectedChunks.get(chunkIndex)!;
-            chunkInfo.data[positionInChunk] = update.tile;
-            chunkInfo.modified = true;
-        }
-
-        // Save only the modified chunks
-        const updatePromises = [];
-        for (const chunkInfo of affectedChunks.values()) {
-            if (chunkInfo.modified) {
-                updatePromises.push(
-                    this.db.tile_chunks.update(chunkInfo.id, {
-                        chunk_data: JSON.stringify(chunkInfo.data),
-                    })
-                );
-            }
-        }
-
-        await Promise.all(updatePromises);
-        console.log(`Updated ${tileUpdates.length} tiles in ${updatePromises.length} chunks`);
+        );
+    }
+    async getAllTiles() {
+        const tileSets = this.client.query(api.functions.getTileSet.getTileSets, {});
+        return tileSets
     }
 
-    // Get current viewport tiles (for display)
-    async getViewportTiles(
-        id: number,
-        viewport: {
-            x: number;
-            y: number;
-            width: number;
-            height: number;
-        }
-    ): Promise<Tile[][]> {
-        const root = await this.db.tiles.get(id);
-        if (!root) {
-            throw new Error(`No tiles found with id: ${id}`);
-        }
+    async loadTiles(id: string): Promise<Tile[][]> {
+        // 1) fetch meta + blocks
+        const { meta, blocks } = await this.client.query(
+            api.functions.getTileSet.getTileSet,
+            { tileSetId: id }
+        );
+        const { width, height } = meta;
 
-        const metadata = JSON.parse(root.tiles_data);
-        const { width: totalWidth, height: totalHeight } = metadata;
+        // 2) allocate 2D array
+        const tiles2D: Tile[][] = Array.from({ length: width }, () =>
+            Array<Tile>(height)
+        );
+        const blockSize = 40;
 
-        // Validate viewport bounds
-        if (
-            viewport.x < 0 ||
-            viewport.y < 0 ||
-            viewport.x + viewport.width > totalWidth ||
-            viewport.y + viewport.height > totalHeight
-        ) {
-            throw new Error("Viewport bounds exceed tile dimensions");
-        }
-
-        const result: Tile[][] = Array(viewport.width)
-            .fill(null)
-            .map(() => Array(viewport.height));
-
-        // Calculate affected chunks
-        const chunkIndices = new Set<number>();
-        for (let x = viewport.x; x < viewport.x + viewport.width; x++) {
-            for (let y = viewport.y; y < viewport.y + viewport.height; y++) {
-                const flatIndex = x * totalHeight + y;
-                chunkIndices.add(Math.floor(flatIndex / this.CHUNK_SIZE));
-            }
-        }
-
-        // Load all needed chunks
-        const chunks = await this.db.tile_chunks
-            .where("main_id")
-            .equals(id)
-            .and(chunk => chunkIndices.has(chunk.chunk_index))
-            .toArray();
-
-        const chunkMap = new Map();
-        chunks.forEach(chunk => {
-            chunkMap.set(chunk.chunk_index, JSON.parse(chunk.chunk_data));
-        });
-
-        // Extract viewport tiles
-        for (let viewportX = 0; viewportX < viewport.width; viewportX++) {
-            for (let viewportY = 0; viewportY < viewport.height; viewportY++) {
-                const actualX = viewport.x + viewportX;
-                const actualY = viewport.y + viewportY;
-                const flatIndex = actualX * totalHeight + actualY;
-                const chunkIndex = Math.floor(flatIndex / this.CHUNK_SIZE);
-                const positionInChunk = flatIndex % this.CHUNK_SIZE;
-
-                const chunkData = chunkMap.get(chunkIndex);
-                if (chunkData) {
-                    result[viewportX][viewportY] = chunkData[positionInChunk];
+        // 3) stitch blocks back in
+        for (const { blockX, blockY, data } of blocks) {
+            for (let i = 0; i < data.length; i++) {
+                const x = blockX * blockSize + i;
+                if (x >= width) continue;
+                for (let j = 0; j < data[i].length; j++) {
+                    const y = blockY * blockSize + j;
+                    if (y >= height) continue;
+                    tiles2D[x][y] = data[i][j];
                 }
             }
         }
-
-        return result;
+        return tiles2D;
     }
 }
