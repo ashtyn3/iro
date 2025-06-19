@@ -29,6 +29,14 @@ export default defineSchema({
         .index("byTileSetId", ["tileSetId"])
         .index("byTileSetAndPos", ["tileSetId", "blockX", "blockY"]),
 
+    entityStates: defineTable({
+        tileSetId: v.id("tileSets"),
+        entityId: v.string(),
+        state: v.any(),
+    })
+        .index("byTileSetId", ["tileSetId"])
+        .index("byEntityId", ["entityId"]),
+
     clusters: defineTable({
         tileSetId: v.id("tileSets"),
         kind: v.number(),

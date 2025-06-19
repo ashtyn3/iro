@@ -61,30 +61,6 @@ export interface TileChunksSchema {
     chunk_data: string;
 }
 
-export class IroDB extends Dexie {
-    tiles!: Table<TilesSchema>;
-    tile_chunks!: Table<TileChunksSchema>;
-    clusters!: Table<ClustersSchema>;
-
-    constructor() {
-        super('IroDB');
-
-        // Version 1 - original schema
-        this.version(1).stores({
-            tiles: '++id, created, tiles_data',
-            tile_chunks: '++id, main_id, chunk_index, chunk_data',
-            clusters: '++id, clusters_data'
-        });
-
-        // Version 2 - with compound index
-        this.version(2).stores({
-            tiles: '++id, created, tiles_data',
-            tile_chunks: '++id, main_id, chunk_index, [main_id+chunk_index], chunk_data',
-            clusters: '++id, clusters_data'
-        });
-    }
-}
-
 function makeBlocks(
     tiles: Tile[][],
     blockSize: number
@@ -114,11 +90,9 @@ function makeBlocks(
     return blocks;
 }
 export class DB {
-    private db: IroDB;
-    private readonly CHUNK_SIZE = 1000; // Adjust based on your needs
+    private readonly CHUNK_SIZE = 1000;
 
     constructor(private client: ConvexClient) {
-        this.db = new IroDB();
     }
 
     async saveTiles(tiles: Tile[][]): Promise<string> {
@@ -156,8 +130,8 @@ export class DB {
             const f_json = JSON.parse(decodedString);
 
             if (f_json.tile_sets && f_json.clusters) {
-                const loadedTileSets = f_json.tile_sets; // Example: if you cache loaded sets
-                const loadedClusters = f_json.clusters; // Example: if you cache loaded clusters
+                const loadedTileSets = f_json.tile_sets;
+                const loadedClusters = f_json.clusters;
                 for (const tileSetData of f_json.tile_sets) {
                     this.saveTiles(tileSetData)
                 }

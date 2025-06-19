@@ -4,8 +4,13 @@ import * as immutable from "immutable";
 // Import Vec2d (the Record factory) from state.ts
 import { Vec2d } from "./state";
 import type { Item } from "./inventory";
+import { Inventory } from "./inventory";
 import { applyMixins, type AddedOf, type Component, type ParamsOf, type UnionToIntersection } from "./comps";
 import { VIEWPORT } from "./map";
+import { api } from "../convex/_generated/api";
+import { Syncable } from "./sync.svelte";
+import { Air } from "./player";
+import SuperJSON from "superjson";
 
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
@@ -160,6 +165,40 @@ export const Collectable: Component<Collectable, {}> =
         return e
     }
 
+export interface Storeable extends Entity {
+    store: () => Promise<void>
+    id: string
+    serialize: () => any
+    deserialize: (data: any) => void
+}
+
+export const Storeable: Component<Storeable, any> = (base, init) => {
+    const e = base as Entity & Storeable & Syncable
+    if (e.sink === undefined) {
+        throw new Error("Storeable entity must also be a Syncable entity")
+    }
+    e.id = crypto.randomUUID()
+
+    e.serialize = () => {
+        const { engine, ...serializableEntity } = e;
+        return serializableEntity;
+    };
+
+    e.deserialize = (data: any) => {
+        Object.assign(e, data);
+    };
+
+    e.store = async () => {
+        e.engine.convex.mutation(api.functions.entityStates.saveEntityState, {
+            tileSetId: e.engine.mapBuilder.mapId,
+            entityId: e.id,
+            state: SuperJSON.stringify(e.serialize()),
+        })
+    }
+    e.add_listener(e.store)
+    return e
+}
+
 export class EntityBuilder<
     M extends Array<Component<any, any>> = []
 > {
@@ -219,4 +258,39 @@ export function promote(e: Engine, pos: Vec2d, params?: { [key: string]: any }):
         e.state.entities = e.state.entities.set(pos, entity);
         return builder.build();
     }
+}
+
+export function deserializeEntity(engine: Engine, data: any): Entity {
+    const entity = Entity(engine, data.char, data.fg, data.bg);
+
+    const builder = new EntityBuilder(entity);
+
+    if (data.position) {
+        builder.add(Movable, data.position);
+    }
+    if (data.health !== undefined) {
+        builder.add(Destructible, data.health);
+    }
+    if (data.Items !== undefined || data.slots !== undefined) {
+        builder.add(Inventory, {
+            slots: data.slots || 5,
+            dominant: data.dominant || "right"
+        });
+    }
+    if (data.air !== undefined) {
+        builder.add(Air, {});
+    }
+
+    if (data.id) {
+        builder.add(Storeable, {});
+        builder.add(Syncable, data.id);
+    }
+
+    const builtEntity = builder.build();
+
+    if ('deserialize' in builtEntity && typeof builtEntity.deserialize === 'function') {
+        builtEntity.deserialize(data);
+    }
+
+    return builtEntity;
 }

@@ -22,6 +22,7 @@
     "lz-string": "^1.5.0",
     "rot-js": "^2.2.1",
     "simplex-noise": "^4.0.3",
+    "superjson": "^2.2.2",
     "svelte-clerk": "^0.13.1",
     "svix": "^1.67.0"
   },
