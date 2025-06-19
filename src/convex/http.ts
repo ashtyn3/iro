@@ -42,7 +42,10 @@ async function validateRequest(req: Request): Promise<WebhookEvent | null> {
         "svix-timestamp": req.headers.get("svix-timestamp")!,
         "svix-signature": req.headers.get("svix-signature")!,
     };
-    const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET || "whsec_QX6KvyZVk8RgRrcvKrWTlXaz+ljjv2+E");
+    if (!process.env.CLERK_WEBHOOK_SECRET) {
+        throw new Error("CLERK_WEBHOOK_SECRET is not set");
+    }
+    const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
     try {
         return wh.verify(payloadString, svixHeaders) as unknown as WebhookEvent;
     } catch (error) {
