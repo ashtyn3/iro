@@ -1,4 +1,4 @@
-import type { Engine } from "$lib"
+import type { Engine } from "./index"
 import type { Act } from "./action"
 import type { Component } from "./comps"
 import { Entity, Movable, promote, type Collectable, type Destructible } from "./entity"
@@ -15,15 +15,15 @@ export const Items: { [key: string]: Item } = {
     empty: {
         name: "none",
         sprite: ["", ""],
-        perform: async function (e: Engine, actor: Entity): Promise<void> {
+        perform: async (e: Engine, actor: Entity): Promise<void> => {
             return
         }
     },
     hand: {
         name: "hand",
-        sprite: [(await import("$lib/assets/hand.png")).default, (await import("$lib/assets/hand-r.png")).default],
-        perform: async function (e: Engine, actor: Movable): Promise<void> {
-            if (e.state.currentCluster?.kind == TileKinds.tree) {
+        sprite: [(await import("~/lib/assets/hand.png")).default, (await import("~/lib/assets/hand-r.png")).default],
+        perform: async (e: Engine, actor: Movable): Promise<void> => {
+            if (e.state.currentCluster?.kind === TileKinds.tree) {
                 const tile = e.mapBuilder.tiles[actor.position.x][actor.position.y];
                 let positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
 
@@ -68,7 +68,7 @@ export const Items: { [key: string]: Item } = {
     wood: {
         name: "wood",
         sprite: ["", ""],
-        perform: async function (e: Engine, actor: Entity): Promise<void> {
+        perform: async (e: Engine, actor: Entity): Promise<void> => {
             throw new Error("Function not implemented.")
         }
     }
@@ -82,7 +82,7 @@ export interface Inventory extends Entity {
 
 export const Inventory: Component<Inventory, { slots: number, dominant: "right" | "left", Items?: { count: number, item: Item }[], hands?: { right: Item, left: Item } }> = (base, params) => {
     const e = base as Entity & Inventory
-    e.Items = params.Items || new Array(params.slots);
+    e.Items = params.Items || new Array(params.slots).fill({ count: 0, item: Items.empty });
     e.hands = params.hands || {
         right: Items.hand,
         left: Items.hand

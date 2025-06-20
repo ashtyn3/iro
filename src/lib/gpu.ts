@@ -1,6 +1,6 @@
 import shader from "./shaders.wgsl?raw"
-import type { Vec2d } from "./entity"
-import { COLORS, TileKinds, VIEWPORT, type Tile } from "./map.ts"
+import type { Vec2d } from "./state"
+import { COLORS, TileKinds, VIEWPORT, type Tile } from "./map"
 
 export class GPURenderer {
     private device!: GPUDevice

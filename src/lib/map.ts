@@ -1,5 +1,5 @@
-import type { Vec2d } from "./entity";
 import type { Engine } from "./index";
+import { Vec2d } from "./state";
 import { createNoise2D } from "simplex-noise";
 import { DB } from "./state";
 import { GPURenderer } from "./gpu";
@@ -59,7 +59,7 @@ export const enum TileKinds {
     tree
 }
 
-export const VIEWPORT: Vec2d = { x: 80, y: 40 };
+export const VIEWPORT: Vec2d = Vec2d({ x: 80, y: 40 });
 
 export type Cluster = {
     kind: TileKinds;
@@ -282,10 +282,13 @@ export class GMap {
         this.computedClusters = await this.findClusters()
         console.log("done workers")
         let db = new DB(this.convex)
-        const id = await db.saveTiles(this.tiles)
-        this.mapId = id
-        await db.saveClusters(id, this.computedClusters)
+        this.mapId = await db.saveTileHeader(this.width, this.height)
         this.buildClusterIndex()
+        this.engine.scheduler.add({act: async () => {
+            await db.saveTiles(this.mapId, this.tiles)
+            await db.saveClusters(this.mapId, this.computedClusters)
+            console.log("saved")
+        }}, false)
     }
 
     interpolateColor(color1: string, color2: string, factor: number): string {

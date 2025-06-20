@@ -1,8 +1,7 @@
-import Dexie, { type Table } from 'dexie';
 import type { Cluster, Clusters, Tile } from './map';
 import type { Entity, Movable } from './entity';
 import * as immutable from 'immutable';
-import { api } from '../convex/_generated/api';
+import { api } from '../../convex/_generated/api';
 import type { ConvexClient } from 'convex/browser';
 
 export interface IVec2d {
@@ -95,12 +94,18 @@ export class DB {
     constructor(private client: ConvexClient) {
     }
 
-    async saveTiles(tiles: Tile[][]): Promise<string> {
-        console.log("saving")
-        const tileSetId = await this.client.mutation(api.functions.saveTileSet.createTileSet, {
-            width: tiles.length,
-            height: tiles[0].length
+    async saveTileHeader(width: number, height: number) {
+        return await this.client.mutation(api.functions.saveTileSet.createTileSet, {
+            width,
+            height
         })
+    }
+    async saveTiles(tileSetId: string, tiles: Tile[][]): Promise<string> {
+        console.log("saving")
+        // const tileSetId = await this.client.mutation(api.functions.saveTileSet.createTileSet, {
+        //     width: tiles.length,
+        //     height: tiles[0].length
+        // })
         const allBlocks = makeBlocks(tiles, 40);
 
         const BATCH = 20;

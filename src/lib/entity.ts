@@ -1,61 +1,20 @@
 // entity.ts
 import { Engine } from "./index";
 import * as immutable from "immutable";
-// Import Vec2d (the Record factory) from state.ts
 import { Vec2d } from "./state";
 import type { Item } from "./inventory";
 import { Inventory } from "./inventory";
 import { applyMixins, type AddedOf, type Component, type ParamsOf, type UnionToIntersection } from "./comps";
 import { VIEWPORT } from "./map";
-import { api } from "../convex/_generated/api";
-import { Syncable } from "./sync.svelte";
+import { api } from "../../convex/_generated/api";
+import { Syncable } from "./sync";
 import { Air } from "./player";
 import SuperJSON from "superjson";
-import type { Id } from "../convex/_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
 
-// export class Entity {
-//     position: Vec2d;
-//     char: string;
-//     fg: string | undefined;
-//     bg: string | undefined;
-//     engine: Engine;
-//
-//     constructor(e: Engine, pos: Vec2d, char: string, fg?: string, bg?: string) {
-//         this.engine = e;
-//         this.position = pos; // Assign the Immutable Record directly
-//         this.char = char;
-//         this.bg = bg;
-//         this.fg = fg;
-//     }
-//
-//     render() {
-//         throw Error("Must implement");
-//     }
-//
-//     // move(delta: { x: number, y: number }): void {
-//     //     const newX = this.position.x + delta.x;
-//     //     const newY = this.position.y + delta.y;
-//     //
-//     //     const oldPositionKey = this.position;
-//     //     const newPositionKey = Vec2d({ x: newX, y: newY }); // Create new Immutable Vec2d Record for potential new key
-//
-//     //
-//     //     // Boundary/collision checks
-//     //     if (newY >= this.engine.height || newX >= this.engine.width || newX < 0 || newY < 0) return;
-//     //     if (this.engine.mapBuilder.tiles[newX][newY].boundary) return;
-//     //
-//     //     // If position hasn't logically changed (e.g., delta was {0,0})
-//     //     if (oldPositionKey.equals(newPositionKey)) {
-//     //         return;
-//     //     }
-//     //
-//     //     this.position = newPositionKey;
-//     //
-//     // }
-// }
 
 export interface Entity {
     engine: Engine,
@@ -65,7 +24,7 @@ export interface Entity {
     render?: () => void
 }
 
-export function Entity(e: Engine, char: string, fg?: string, bg?: string): Entity {
+export function createEntity(e: Engine, char: string, fg?: string, bg?: string): Entity {
     return {
         engine: e,
         char: char,
@@ -127,7 +86,7 @@ export const Collectable: Component<Collectable, {}> =
     (base) => {
         // cast once to the widened type
         const e = base as Entity & Collectable
-        e.collect = function (item: Item, amount: number): boolean {
+        e.collect = (item: Item, amount: number): boolean => {
             for (let i = 0; i < base.engine.player.Items.length; i++) {
                 const slot = base.engine.player.Items[i];
                 if (slot !== undefined) {
@@ -141,7 +100,7 @@ export const Collectable: Component<Collectable, {}> =
 
             const findEmptySlot = (): number => {
                 for (let i = 0; i < base.engine.player.Items.length; i++) {
-                    if (base.engine.player.Items[i] === undefined || base.engine.player.Items[i].item.name === "None") {
+                    if (base.engine.player.Items[i] === undefined || base.engine.player.Items[i].item.name === "none") {
                         return i;
                     }
                 }
@@ -241,7 +200,7 @@ export class EntityBuilder<
 
 export function promote(e: Engine, pos: Vec2d, params?: { [key: string]: any }): Entity {
     const tile = e.mapBuilder.tiles[pos.x][pos.y];
-    let entity: Entity = Entity(e, tile.char, tile.fg, tile.bg);
+    let entity: Entity = createEntity(e, tile.char, tile.fg, tile.bg);
     let builder = new EntityBuilder(entity)
 
     const make_entity = (type: string) => {
@@ -269,7 +228,7 @@ export function promote(e: Engine, pos: Vec2d, params?: { [key: string]: any }):
 }
 
 export function deserializeEntity(engine: Engine, data: any, existingEntity?: Entity): Entity {
-    const entityToBuildOn = existingEntity ?? Entity(engine, data.char, data.fg, data.bg);
+    const entityToBuildOn = existingEntity ?? createEntity(engine, data.char, data.fg, data.bg);
     const builder = new EntityBuilder(entityToBuildOn);
 
     if (data.position) {
@@ -290,9 +249,10 @@ export function deserializeEntity(engine: Engine, data: any, existingEntity?: En
         builder.add(Air, {});
     }
 
-    if (data.listeners) {
+    if (data.syncable && existingEntity?.syncable === undefined) {
         builder.add(Syncable, data.id);
     }
+
     if (data.id) {
         builder.add(Storeable, data.id);
     }
@@ -301,10 +261,6 @@ export function deserializeEntity(engine: Engine, data: any, existingEntity?: En
 
     if (existingEntity) {
         Object.assign(existingEntity, builtEntity);
-        const syncableEntity = existingEntity as Entity & Syncable;
-        if (syncableEntity.subscribe !== undefined) {
-            syncableEntity.update(builtEntity)
-        }
         return existingEntity;
     }
 

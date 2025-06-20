@@ -4,7 +4,7 @@ import { GMap, VIEWPORT } from "./map";
 import { Air, Player } from "./player";
 import { KeyHandles } from "./keyhandle";
 import { Vec2d, type State } from "./state";
-import { Syncable } from "./sync.svelte";
+import { Syncable } from "./sync";
 import { Inventory } from "./inventory";
 import * as immutable from "immutable";
 import type { Movable, Storeable } from "./entity";
@@ -56,7 +56,7 @@ export class Engine {
 
     async start() {
         await this.player.sync()
-        this.player.update(this.player)
+        this.player.update({...this.player})
         this.clock = 60
         const actor = {
             act: () => {
@@ -69,12 +69,12 @@ export class Engine {
                     }
                     this.clock = 60
                 } else {
-                    if (this.clock == 20) {
+                    if (this.clock === 20) {
                         if (this.player.air === 0) {
                             this.mapBuilder.VIEW_RADIUS = this.mapBuilder.VIEW_RADIUS ^ 1;
                         }
                     }
-                    if (this.clock == 30) {
+                    if (this.clock === 30) {
                         if (this.player.air === 0) {
                             this.mapBuilder.VIEW_RADIUS = this.mapBuilder.VIEW_RADIUS ^ 2;
                         }

@@ -13,12 +13,6 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as functions_clusters from "../functions/clusters.js";
-import type * as functions_entityStates from "../functions/entityStates.js";
-import type * as functions_getTileSet from "../functions/getTileSet.js";
-import type * as functions_saveTileSet from "../functions/saveTileSet.js";
-import type * as http from "../http.js";
-import type * as users from "../users.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -28,14 +22,7 @@ import type * as users from "../users.js";
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{
-  "functions/clusters": typeof functions_clusters;
-  "functions/entityStates": typeof functions_entityStates;
-  "functions/getTileSet": typeof functions_getTileSet;
-  "functions/saveTileSet": typeof functions_saveTileSet;
-  http: typeof http;
-  users: typeof users;
-}>;
+declare const fullApi: ApiFromModules<{}>;
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">

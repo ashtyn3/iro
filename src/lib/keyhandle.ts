@@ -1,4 +1,4 @@
-import type { Engine } from "$lib";
+import type { Engine } from "./index";
 import type { Act } from "./action";
 import type { Entity, Movable } from "./entity";
 import { Items, type Inventory } from "./inventory";

@@ -1,5 +1,6 @@
-import type { Engine } from "$lib";
-import { Entity, type Vec2d } from "./entity";
+import type { Engine } from "./index";
+import { Entity, type Movable } from "./entity";
+import type { Vec2d } from "./state";
 
 export class Gobject extends Entity {
     parts: Array<Entity>
