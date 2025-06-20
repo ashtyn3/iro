@@ -11,6 +11,7 @@ import { api } from "../convex/_generated/api";
 import { Syncable } from "./sync.svelte";
 import { Air } from "./player";
 import SuperJSON from "superjson";
+import type { Id } from "../convex/_generated/dataModel";
 
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
@@ -96,9 +97,7 @@ export const Movable: Component<Movable, Vec2d> = (base, init) => {
         if (oldPositionKey.equals(newPositionKey)) {
             return;
         }
-
         e.position = newPositionKey;
-
     }
 
     return e
@@ -134,7 +133,7 @@ export const Collectable: Component<Collectable, {}> =
                 if (slot !== undefined) {
                     if (slot.item && slot.item.name === item.name) {
                         slot.count += amount;
-                        base.engine.player.update()
+                        base.engine.player.update({ Items: [...base.engine.player.Items] })
                         return true;
                     }
                 }
@@ -158,7 +157,7 @@ export const Collectable: Component<Collectable, {}> =
                 count: amount,
                 item
             };
-            base.engine.player.update()
+            base.engine.player.update({ Items: [...base.engine.player.Items] })
             return true;
 
         }
@@ -170,14 +169,22 @@ export interface Storeable extends Entity {
     id: string
     serialize: () => any
     deserialize: (data: any) => void
+    sync: () => Promise<void>
 }
 
-export const Storeable: Component<Storeable, any> = (base, init) => {
-    const e = base as Entity & Storeable & Syncable
-    if (e.sink === undefined) {
-        throw new Error("Storeable entity must also be a Syncable entity")
+export const Storeable: Component<Storeable, string> = (base, init) => {
+    let e = base as Entity & Storeable & Syncable
+    e.id = init
+
+    e.sync = async () => {
+        const state = await e.engine.convex.query(api.functions.entityStates.getEntityState, {
+            tileSetId: e.engine.mapBuilder.mapId as Id<"tileSets">,
+            entityId: e.id,
+        })
+        if (state) {
+            deserializeEntity(e.engine, SuperJSON.parse(state), e)
+        }
     }
-    e.id = crypto.randomUUID()
 
     e.serialize = () => {
         const { engine, ...serializableEntity } = e;
@@ -189,15 +196,15 @@ export const Storeable: Component<Storeable, any> = (base, init) => {
     };
 
     e.store = async () => {
-        e.engine.convex.mutation(api.functions.entityStates.saveEntityState, {
-            tileSetId: e.engine.mapBuilder.mapId,
+        await e.engine.convex.mutation(api.functions.entityStates.saveEntityState, {
+            tileSetId: e.engine.mapBuilder.mapId as Id<"tileSets">,
             entityId: e.id,
             state: SuperJSON.stringify(e.serialize()),
         })
     }
-    e.add_listener(e.store)
     return e
 }
+
 
 export class EntityBuilder<
     M extends Array<Component<any, any>> = []
@@ -258,15 +265,15 @@ export function promote(e: Engine, pos: Vec2d, params?: { [key: string]: any }):
         e.state.entities = e.state.entities.set(pos, entity);
         return builder.build();
     }
+    return entity;
 }
 
-export function deserializeEntity(engine: Engine, data: any): Entity {
-    const entity = Entity(engine, data.char, data.fg, data.bg);
-
-    const builder = new EntityBuilder(entity);
+export function deserializeEntity(engine: Engine, data: any, existingEntity?: Entity): Entity {
+    const entityToBuildOn = existingEntity ?? Entity(engine, data.char, data.fg, data.bg);
+    const builder = new EntityBuilder(entityToBuildOn);
 
     if (data.position) {
-        builder.add(Movable, data.position);
+        builder.add(Movable, Vec2d(data.position));
     }
     if (data.health !== undefined) {
         builder.add(Destructible, data.health);
@@ -274,22 +281,31 @@ export function deserializeEntity(engine: Engine, data: any): Entity {
     if (data.Items !== undefined || data.slots !== undefined) {
         builder.add(Inventory, {
             slots: data.slots || 5,
-            dominant: data.dominant || "right"
+            dominant: data.dominant || "right",
+            Items: data.Items,
+            hands: data.hands
         });
     }
     if (data.air !== undefined) {
         builder.add(Air, {});
     }
 
-    if (data.id) {
-        builder.add(Storeable, {});
+    if (data.listeners) {
         builder.add(Syncable, data.id);
+    }
+    if (data.id) {
+        builder.add(Storeable, data.id);
     }
 
     const builtEntity = builder.build();
 
-    if ('deserialize' in builtEntity && typeof builtEntity.deserialize === 'function') {
-        builtEntity.deserialize(data);
+    if (existingEntity) {
+        Object.assign(existingEntity, builtEntity);
+        const syncableEntity = existingEntity as Entity & Syncable;
+        if (syncableEntity.subscribe !== undefined) {
+            syncableEntity.update(builtEntity)
+        }
+        return existingEntity;
     }
 
     return builtEntity;

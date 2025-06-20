@@ -1,22 +1,19 @@
 <script lang="ts">
-    const { sink } = $props();
-    const sync = $derived(sink.sink());
-    let items = $state(sync.Items);
-    let air = $state(sync.air);
-    $effect(() => {
-        items = sync.Items;
-        air = sync.air;
-    });
+    import type { PlayerType } from "$lib/player";
+
+    const { sink: player } = $props<{ sink: PlayerType }>();
 </script>
 
-<div id="stats">
-    <p id="air">{air || 0}% AIR</p>
-    {#each items as item}
-        {#if item !== undefined}
-            {item.item.name}x{item.count}
-        {/if}
-    {/each}
-</div>
+{#if $player}
+    <div id="stats">
+        <p id="air">{$player.air}% AIR</p>
+        {#each $player.Items as item}
+            {#if item !== undefined}
+                {item.item.name}x{item.count}
+            {/if}
+        {/each}
+    </div>
+{/if}
 
 <style>
     #stats {

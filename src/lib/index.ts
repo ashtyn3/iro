@@ -7,7 +7,7 @@ import { Vec2d, type State } from "./state";
 import { Syncable } from "./sync.svelte";
 import { Inventory } from "./inventory";
 import * as immutable from "immutable";
-import type { Movable } from "./entity";
+import type { Movable, Storeable } from "./entity";
 import type { ConvexClient } from "convex/browser";
 
 export class Engine {
@@ -15,12 +15,12 @@ export class Engine {
     height: number;
     display: ROT.Display;
     mapBuilder: GMap;
-    player: Movable & Inventory & Syncable & Air;
+    player: Movable & Inventory & Syncable & Air & Storeable;
 
     scheduler: SimpleScheduler;
     engine: ROT.Engine;
     state: State
-    clock: number
+    clock: number = 60
     convex: ConvexClient
 
     constructor(w: number, h: number, convex: ConvexClient) {
@@ -40,18 +40,23 @@ export class Engine {
             forceSquareRatio: true,
         });
 
-        this.mapBuilder = new GMap(this.width, this.height, this, this.convex);
+        this.mapBuilder = new GMap(this.width, this.height, this, this.convex, "");
         if (navigator.gpu) {
             this.mapBuilder.useGPU = true
         }
+        this.scheduler = new SimpleScheduler();
         this.player = Player(this, "@", "right");
 
-        this.scheduler = new SimpleScheduler();
         this.engine = new ROT.Engine(this.scheduler);
         this.state = {
             currentCluster: null,
             entities: immutable.Map()
         }
+    }
+
+    async start() {
+        await this.player.sync()
+        this.player.update(this.player)
         this.clock = 60
         const actor = {
             act: () => {
@@ -81,7 +86,6 @@ export class Engine {
             }
         }
         this.scheduler.add(actor, true);
-
     }
 
     renderDOM() {
@@ -113,7 +117,7 @@ export class Engine {
         });
 
 
-        window.onbeforeunload = function(event) {
+        window.onbeforeunload = function (event) {
             return confirm("Confirm refresh");
         };
 
@@ -140,7 +144,7 @@ export class Engine {
 
     public async render() {
         await this.mapBuilder.render();
-        this.player.render();
+        this.player?.render?.();
     }
 }
 

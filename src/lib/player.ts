@@ -1,19 +1,22 @@
 import type { Engine } from "$lib";
 import type { Component } from "./comps";
 import { Entity, EntityBuilder, Movable, Storeable } from "./entity";
-import { Inventory } from "./inventory";
+import { Inventory, type Item } from "./inventory";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync.svelte";
 
-export const Player = (e: Engine, char: string, dominant: "left" | "right") => {
-    const data: Entity = Entity(e, char)
-    let builder = new EntityBuilder(data)
-    let built = builder.add(Movable, Vec2d({ x: 4, y: 10 }))
-        .add(Inventory, { slots: 5, dominant: dominant })
-        .add(Syncable, "player")
-        .add(Air, {})
-        .add(Storeable, {})
-        .build()
+const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => new EntityBuilder(Entity(e, char))
+    .add(Movable, Vec2d({ x: 4, y: 10 }))
+    .add(Inventory, { slots: 5, dominant: dominant })
+    .add(Syncable, "player")
+    .add(Air, {})
+    .add(Storeable, "player")
+
+export type PlayerType = ReturnType<ReturnType<typeof playerBuilder>["build"]>
+
+
+export const Player = (e: Engine, char: string, dominant: "left" | "right"): PlayerType => {
+    const built = playerBuilder(e, char, dominant).build()
     built.render = () => {
         const vp = e.viewport()
         const px = built.position.x - vp.x;

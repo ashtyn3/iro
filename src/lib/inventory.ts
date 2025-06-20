@@ -13,14 +13,14 @@ export interface Item extends Act {
 
 export const Items: { [key: string]: Item } = {
     empty: {
-        name: "None",
+        name: "none",
         sprite: ["", ""],
         perform: async function (e: Engine, actor: Entity): Promise<void> {
             return
         }
     },
     hand: {
-        name: "Hand",
+        name: "hand",
         sprite: [(await import("$lib/assets/hand.png")).default, (await import("$lib/assets/hand-r.png")).default],
         perform: async function (e: Engine, actor: Movable): Promise<void> {
             if (e.state.currentCluster?.kind == TileKinds.tree) {
@@ -58,14 +58,9 @@ export const Items: { [key: string]: Item } = {
                     );
                     e.state.entities = e.state.entities.delete(positionKey);
                     for (const up of tileUpdates) {
-                        e.engine._scheduler.add({
-                            act: async () => {
-                                await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile)
-                                await e.mapBuilder.removeCluster(e.state.currentCluster!);
-                            }
-                        }, false)
+                        await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
                     }
-
+                    await e.mapBuilder.removeCluster(e.state.currentCluster!);
                 }
             }
         }
@@ -85,10 +80,10 @@ export interface Inventory extends Entity {
     dominant: "right" | "left"
 }
 
-export const Inventory: Component<Inventory, { slots: number, dominant: "right" | "left" }> = (base, params) => {
+export const Inventory: Component<Inventory, { slots: number, dominant: "right" | "left", Items?: { count: number, item: Item }[], hands?: { right: Item, left: Item } }> = (base, params) => {
     const e = base as Entity & Inventory
-    e.Items = new Array(params.slots);
-    e.hands = {
+    e.Items = params.Items || new Array(params.slots);
+    e.hands = params.hands || {
         right: Items.hand,
         left: Items.hand
     };

@@ -1,16 +1,19 @@
 <script lang="ts">
-    const { sink } = $props();
-    const sync = $derived(sink.sink());
+    import type { PlayerType } from "$lib/player";
+
+    const { sink: player } = $props<{ sink: PlayerType }>();
 </script>
 
-<div id="hands">
-    <div>
-        <img src={sync?.hands.left.sprite[0]} width="60" />
+{#if $player}
+    <div id="hands">
+        <div>
+            <img src={$player.hands.left.sprite[0]} width="60" />
+        </div>
+        <div>
+            <img src={$player.hands.right.sprite[1]} width="60" />
+        </div>
     </div>
-    <div>
-        <img src={sync?.hands.right.sprite[1]} width="60" />
-    </div>
-</div>
+{/if}
 
 <style>
     #hands {

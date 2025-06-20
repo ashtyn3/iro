@@ -40,7 +40,9 @@
             }
         });
         if (current_state === "game") {
-            engine?.renderDOM();
+            engine?.start().then(() => {
+                engine?.renderDOM();
+            });
         }
     });
 </script>

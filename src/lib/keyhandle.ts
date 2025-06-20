@@ -1,7 +1,7 @@
 import type { Engine } from "$lib";
 import type { Act } from "./action";
 import type { Entity, Movable } from "./entity";
-import type { Inventory } from "./inventory";
+import { Items, type Inventory } from "./inventory";
 import { Vec2d } from "./state";
 
 const moveUpAction: Act = {
@@ -48,7 +48,7 @@ export const KeyHandles: { [key: string]: Act } = {
     "f": {
         perform: async (e: Engine, actor: Movable): Promise<void> => {
             const a = actor as Movable & Inventory;
-            await a.hands[a.dominant].perform(e, actor);
+            Items[await a.hands[a.dominant].name].perform(e, actor);
         }
     }
 };

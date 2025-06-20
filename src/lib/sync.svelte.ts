@@ -1,6 +1,6 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { Component } from "./comps";
-import type { Entity } from "./entity";
+import type { Entity, Storeable } from "./entity";
 import type { State } from "./state";
 import { useConvexClient } from "convex-svelte";
 
@@ -10,38 +10,39 @@ import { useConvexClient } from "convex-svelte";
 //     syncable.s = s
 // }
 
-let sinkMap = new SvelteMap<string, Entity>()
+export const sinkMap = new SvelteMap<string, any>();
+
+type Listener = (entity: Entity) => void;
 
 export interface Syncable {
-    sink: () => Entity
-    update: () => void
-    listeners: (() => void)[]
-    add_listener: (listener: () => Promise<void>) => void
-    serialize: () => any
-    deserialize: (data: any) => void
+    update: (props: Partial<any>) => void;
+    subscribe: (callback: Listener) => () => void;
 }
 
 export const Syncable: Component<Syncable, string> = (base, init) => {
-    const e = base as Entity & Syncable;
-    sinkMap.set(init, e)
-    e.sink = () => sinkMap.get(init)!
-    e.listeners = []
-    e.add_listener = (listener: () => void) => {
-        e.listeners.push(listener)
-    }
+    const e = base as Entity & Syncable & Storeable;
+    let listeners: Listener[] = [];
 
-    e.serialize = () => {
-        const { engine, ...serializableEntity } = e;
-        return serializableEntity;
+    let latestState = { ...e };
+
+    e.subscribe = (callback: Listener) => {
+        listeners.push(callback);
+        callback(latestState);
+        return () => {
+            listeners = listeners.filter(l => l !== callback);
+        };
     };
 
-    e.deserialize = (data: any) => {
-        Object.assign(e, data);
+    e.update = (props: Partial<Entity>) => {
+        Object.assign(latestState, props);
+        Object.assign(e, props);
+
+        e.store();
+
+        for (const listener of listeners) {
+            listener(latestState);
+        }
     };
 
-    e.update = async () => {
-        sinkMap.set(init, { ...e });
-        await Promise.all(e.listeners.map(async l => await l()))
-    };
-    return e
+    return e;
 }
