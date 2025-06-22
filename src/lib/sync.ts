@@ -14,7 +14,7 @@ export const Syncable: Component<Syncable, string> = (base, init) => {
 
   const initialState = { ...e };
 
-  const [entityStore, setEntityStore] = createStore<Entity>(initialState);
+  const [entityStore, setEntityStore] = createStore<typeof base>(initialState);
 
 
   e.value = () => {

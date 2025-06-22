@@ -1,5 +1,6 @@
 import { For, onMount } from "solid-js";
-import { Engine } from "~/lib";
+import type { Engine } from "~/lib";
+import type { PlayerType } from "~/lib/player";
 // import hand from "~/lib/assets/hand.png";
 // import handR from "~/lib/assets/hand-r.png";
 
@@ -10,7 +11,7 @@ export default function Game({ engine }: { engine: Engine }) {
 			engine.renderDOM();
 		});
 
-		let player = () => engine.player.value() as any;
+		const player: () => PlayerType = () => engine.player.value() as PlayerType;
 
 		return (
 			<div class="w-full h-full bg-black">
