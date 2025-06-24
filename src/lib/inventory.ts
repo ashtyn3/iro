@@ -15,6 +15,7 @@ import { TileKinds, VIEWPORT } from "./map";
 import { DB, Vec2d } from "./state";
 import type { JSX } from "solid-js";
 import { Syncable } from "./sync";
+import { Air } from "./player";
 
 export interface Item extends Act {
 	name: string;
@@ -29,7 +30,23 @@ export const Items: { [key: string]: Item } = {
 	empty: {
 		name: "none",
 		sprite: ["", ""],
+		usable: false,
 		perform: async (): Promise<void> => {
+			return;
+		},
+	},
+	o2: {
+		name: "o2",
+		sprite: [await assetPath("o2"), await assetPath("o2")],
+		usable: true,
+		perform: async (e: Engine, actor: Movable & Air): Promise<void> => {
+			actor.air += 10;
+			if (actor.air > 100) {
+				actor.air = 100;
+			}
+			if (actor.update) {
+				actor.update({ air: actor.air });
+			}
 			return;
 		},
 	},
@@ -149,7 +166,7 @@ export const Inventory: Component<
 	{
 		slots: number;
 		dominant: "right" | "left";
-		Items?: Item[];
+		Items?: { item: Item; count: number }[];
 		hands?: { right: Item; left: Item };
 	}
 > = (base, params) => {

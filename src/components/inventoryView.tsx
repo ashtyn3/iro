@@ -29,39 +29,62 @@ function cell({
 			onclick={() => {
 				console.log(item);
 				if (hand && item.name !== "hand") {
-					engine.player.handPut(Items.hand, engine.player.dominant);
-					engine.player.put({ count: 1, item: item });
-					engine.player.update({
-						hands: { ...engine.player.hands },
-						Items: [...engine.player.Items],
-					});
-				}
-				if (!hand) {
-					if (count > 0) {
-						const item = engine.player.Items[i()];
-						if (item.item.usable) {
-							engine.player.Items[i()] = {
-								count: 0,
-								item: Items.empty,
-							};
-							const altHand =
-								engine.player.dominant === "right" ? "left" : "right";
-							if (engine.player.hands[engine.player.dominant].name !== "hand") {
-								engine.player.handPut(item.item, altHand);
-							} else if (engine.player.hands[altHand].name === "hand") {
-								engine.player.handPut(item.item, engine.player.dominant);
-							}
-							if (
-								engine.player.hands[engine.player.dominant].name !== "hand" &&
-								engine.player.hands[altHand].name !== "hand"
-							) {
-								return;
-							}
-							engine.player.update({
-								Items: [...engine.player.Items],
-								hands: { ...engine.player.hands },
-							});
+					// Remove the item from the hand and put it back into inventory
+					// Only do this if the hand is not already empty
+					// Make sure to only remove the item from the correct hand, not both
+					// Determine which hand was clicked: i() === 0 is left, i() === 1 is right
+					const handClicked = i() === 0 ? "right" : "left";
+					if (engine.player.hands[handClicked].name !== "hand") {
+						const itemInHand = engine.player.hands[handClicked];
+						engine.player.handPut(Items.hand, handClicked);
+						engine.player.put({ count: 1, item: itemInHand });
+						engine.player.update({
+							hands: { ...engine.player.hands },
+							Items: [...engine.player.Items],
+						});
+					}
+				} else if (!hand) {
+					// Only allow putting an item into a hand if it is usable and count > 0
+					if (count > 0 && item.usable) {
+						const slot = engine.player.Items[i()];
+						// Only allow putting an item into a hand if that hand is empty
+						// and the item is not already in either hand
+						const dominantHand = engine.player.dominant;
+						const altHand = dominantHand === "right" ? "left" : "right";
+
+						// Don't allow putting the same item in both hands
+						const inDominant =
+							engine.player.hands[dominantHand].name === slot.item.name;
+						const inAlt = engine.player.hands[altHand].name === slot.item.name;
+
+						if (inDominant || inAlt) {
+							return;
 						}
+
+						// If dominant hand is empty, put item there
+						if (engine.player.hands[dominantHand].name === "hand") {
+							engine.player.handPut(slot.item, dominantHand);
+							engine.player.Items[i()] = {
+								count: slot.count - 1,
+								item: slot.count - 1 > 0 ? slot.item : Items.empty,
+							};
+						}
+						// Else if alt hand is empty, put item there
+						else if (engine.player.hands[altHand].name === "hand") {
+							engine.player.handPut(slot.item, altHand);
+							engine.player.Items[i()] = {
+								count: slot.count - 1,
+								item: slot.count - 1 > 0 ? slot.item : Items.empty,
+							};
+						}
+						// If both hands are full, do nothing
+						else {
+							return;
+						}
+						engine.player.update({
+							Items: [...engine.player.Items],
+							hands: { ...engine.player.hands },
+						});
 					}
 				}
 			}}

@@ -20,7 +20,7 @@ const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") =>
 			dominant: dominant,
 			Items: [
 				{ count: 1, item: Items.pickaxe },
-				{ count: 0, item: Items.empty },
+				{ count: 1, item: Items.o2 },
 				{ count: 0, item: Items.empty },
 				{ count: 0, item: Items.empty },
 				{ count: 0, item: Items.empty },
