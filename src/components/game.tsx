@@ -1,8 +1,31 @@
 import { For, onMount } from "solid-js";
 import type { Engine } from "~/lib";
+import type { Item, MenuHolder } from "~/lib/inventory";
 import type { PlayerType } from "~/lib/player";
-// import hand from "~/lib/assets/hand.png";
-// import handR from "~/lib/assets/hand-r.png";
+import InventoryViewer from "./inventoryView";
+import { effect } from "solid-js/web";
+
+export function Inventory({ engine }: { engine: Engine }) {
+	const itemArray = (): Item[] => engine.player.value().Items;
+	return (
+		<div class="flex flex-row gap-2">
+			<For each={itemArray()}>
+				{(slot) =>
+					slot?.item?.name !== "none" && (
+						<div class="flex flex-row gap-2 items-center">
+							<img
+								src={slot.item.sprite[0]}
+								alt={slot.item.name}
+								class="w-8 h-8"
+							/>
+							x{slot.count}
+						</div>
+					)
+				}
+			</For>
+		</div>
+	);
+}
 
 export default function Game({ engine }: { engine: Engine }) {
 	try {
@@ -12,22 +35,17 @@ export default function Game({ engine }: { engine: Engine }) {
 		});
 
 		const player: () => PlayerType = () => engine.player.value() as PlayerType;
+		const menu = () => engine.menuHolder.value() as MenuHolder;
 
+		effect(() => {
+			console.log(menu());
+		});
 		return (
 			<div class="w-full h-full bg-black">
+				{menu().Menu()}
 				<div class="flex flex-row justify-between">
 					<p>{player().air}% Air</p>
-					<div class="flex flex-row gap-2">
-						<For each={player().Items}>
-							{(slot) =>
-								slot?.item?.name !== "none" && (
-									<div>
-										{slot.item.name}x{slot.count}
-									</div>
-								)
-							}
-						</For>
-					</div>
+					<Inventory engine={engine} />
 				</div>
 				<div id="gamebox"></div>
 				<div class="flex flex-row gap-2 justify-center m-5">
