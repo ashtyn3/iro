@@ -27,12 +27,10 @@ function cell({
 		<div
 			class="bg-transparent border-2 border-white text-white font-bold transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0 flex flex-col items-center justify-center px-4 py-2"
 			onclick={() => {
-				console.log(item);
 				if (hand && item.name !== "hand") {
 					// Remove the item from the hand and put it back into inventory
 					// Only do this if the hand is not already empty
 					// Make sure to only remove the item from the correct hand, not both
-					// Determine which hand was clicked: i() === 0 is left, i() === 1 is right
 					const handClicked = i() === 0 ? "right" : "left";
 					if (engine.player.hands[handClicked].name !== "hand") {
 						const itemInHand = engine.player.hands[handClicked];

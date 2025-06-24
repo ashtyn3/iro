@@ -20,6 +20,7 @@ export class Engine {
 	engine: ROT.Engine;
 	state: State;
 	clock: number = 60;
+	cycles: number = 0;
 	convex: ConvexClient;
 	menuHolder: MenuHolder;
 
@@ -65,10 +66,21 @@ export class Engine {
 				const cluster = this.mapBuilder.getClusterAt(player_vec);
 				this.state.currentCluster = cluster || null;
 				if (this.clock === 0) {
+					if (this.player.air !== 0) {
+						this.mapBuilder.VIEW_RADIUS = Math.floor(
+							(this.player.air / 100) * 10,
+						);
+						if (this.cycles % 2 === 0) {
+							this.player.air -= 10;
+							this.player.update({ air: this.player.air });
+						}
+					}
+
 					if (this.player.air === 0) {
 						this.mapBuilder.VIEW_RADIUS = 0;
 					}
 					this.clock = 60;
+					this.cycles += 1;
 				} else {
 					if (this.clock === 20) {
 						if (this.player.air === 0) {
@@ -81,6 +93,9 @@ export class Engine {
 						}
 					}
 					this.clock -= 1;
+				}
+				if (this.cycles === 100) {
+					this.cycles = 0;
 				}
 				// world‐update logic goes here…
 				this.engine.lock();
