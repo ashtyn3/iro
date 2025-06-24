@@ -4,6 +4,7 @@ import type { Entity, Movable } from "./entity";
 import { Items, type Inventory } from "./inventory";
 import { Vec2d } from "./state";
 import InventoryViewer from "~/components/inventoryView";
+import { PlayerType } from "./player";
 
 const moveUpAction: Act = {
 	perform: async (e: Engine, actor: Movable): Promise<void> => {
@@ -59,6 +60,13 @@ export const KeyHandles: { [key: string]: Act } = {
 			} else {
 				e.menuHolder.setMenu(() => InventoryViewer({ engine: e }));
 			}
+		},
+	},
+	r: {
+		perform: async (e: Engine, actor: Movable): Promise<void> => {
+			const a = actor as PlayerType;
+			a.handSwap();
+			a.update({ hands: a.hands });
 		},
 	},
 };

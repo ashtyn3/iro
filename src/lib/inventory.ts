@@ -159,6 +159,7 @@ export interface Inventory extends Entity {
 	dominant: "right" | "left";
 	put: (item: { count: number; item: Item }) => void;
 	handPut: (item: Item, hand: "left" | "right") => void;
+	handSwap: () => void;
 }
 
 export const Inventory: Component<
@@ -185,6 +186,11 @@ export const Inventory: Component<
 	e.dominant = params.dominant;
 	e.handPut = (item: Item, hand: "left" | "right") => {
 		e.hands[hand] = item;
+	};
+	e.handSwap = () => {
+		const temp = e.hands.right;
+		e.hands.right = e.hands.left;
+		e.hands.left = temp;
 	};
 	e.put = (item: { count: number; item: Item }) => {
 		let found = false;
