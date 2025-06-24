@@ -6,7 +6,8 @@ import InventoryViewer from "./inventoryView";
 import { effect } from "solid-js/web";
 
 export function Inventory({ engine }: { engine: Engine }) {
-	const itemArray = (): Item[] => engine.player.value().Items;
+	const itemArray = (): { count: number; item: Item }[] =>
+		engine.player.value().Items;
 	return (
 		<div class="flex flex-row gap-2">
 			<For each={itemArray()}>
@@ -31,7 +32,7 @@ export default function Game({ engine }: { engine: Engine }) {
 	try {
 		onMount(async () => {
 			await engine.start();
-			engine.renderDOM();
+			await engine.renderDOM();
 		});
 
 		const player: () => PlayerType = () => engine.player.value() as PlayerType;

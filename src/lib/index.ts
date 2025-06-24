@@ -104,7 +104,7 @@ export class Engine {
 		this.scheduler.add(actor, true);
 	}
 
-	renderDOM() {
+	async renderDOM() {
 		const canvas = this.display.getContainer() as HTMLCanvasElement;
 
 		// Stretch to 90% of viewport width/height
@@ -133,9 +133,7 @@ export class Engine {
 			);
 		});
 
-		window.onbeforeunload = function (event) {
-			return confirm("Confirm refresh");
-		};
+		window.onbeforeunload = () => confirm("Confirm refresh");
 
 		const frame = async () => {
 			this.engine.unlock();
@@ -144,8 +142,8 @@ export class Engine {
 		};
 		requestAnimationFrame(frame);
 
-		document.getElementById("gamebox")!.appendChild(canvas);
-		this.render();
+		document.getElementById("gamebox")?.appendChild(canvas);
+		await this.render();
 		console.log(this.mapBuilder.useGPU ? "using GPU" : "using CPU");
 	}
 	viewport(): Vec2d {
