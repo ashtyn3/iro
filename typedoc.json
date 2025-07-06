@@ -1,0 +1,69 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Game Engine Documentation",
+  "entryPoints": [
+    "src/lib/index.ts",
+    "src/lib/entity.ts", 
+    "src/lib/map.ts",
+    "src/lib/gpu.ts",
+    "src/lib/inventory.ts",
+    "src/lib/player.ts"
+  ],
+  "out": "docs-generated",
+  "theme": "default",
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "categorizeByGroup": true,
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace", 
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Method",
+    "Parameter",
+    "TypeParameter",
+    "Accessor",
+    "GetSignature",
+    "SetSignature",
+    "Reference"
+  ],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "treatWarningsAsErrors": false,
+  "excludeExternals": true,
+  "excludeNotDocumented": false,
+  "gitRevision": "main",
+  "hideGenerator": false,
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "titleLink": "/",
+  "navigationLinks": {
+    "GitHub": "https://github.com/yourusername/game-engine",
+    "NPM": "https://www.npmjs.com/package/your-game-engine"
+  },
+  "sidebarLinks": {
+    "Documentation": "/",
+    "Examples": "/examples",
+    "API Reference": "/api"
+  }
+}

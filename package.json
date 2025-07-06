@@ -4,7 +4,13 @@
   "scripts": {
     "dev": "vinxi dev",
     "build": "vinxi build",
-    "start": "vinxi start"
+    "start": "vinxi start",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
+    "docs:serve": "typedoc && npx http-server docs-generated -p 3001",
+    "docs:generate": "node docs-generate.cjs",
+    "docs:auto": "npx tsdoc-markdown --src=src/lib/index.ts --dest=AUTO_DOCS.md --types",
+    "docs:api": "npx docs-typescript extract && npx docs-typescript build"
   },
   "dependencies": {
     "@solid-primitives/map": "^0.7.1",
@@ -24,7 +30,8 @@
   "devDependencies": {
     "@biomejs/biome": "2.0.4",
     "@tailwindcss/vite": "^4.0.7",
-    "tailwindcss": "^4.0.7"
+    "tailwindcss": "^4.0.7",
+    "typedoc": "^0.26.15"
   },
   "engines": {
     "node": ">=22"
