@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Engine Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>🎮 Game Engine Docs</h1>
+                </div>
+                <nav class="nav">
+                    <a href="#overview">Overview</a>
+                    <a href="#api">API</a>
+                    <a href="#components">Components</a>
+                    <a href="#examples">Examples</a>
+                    <a href="https://github.com/yourusername/game-engine" target="_blank">GitHub</a>
+                </nav>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search documentation..." class="search-input">
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <h3>Getting Started</h3>
+                    <ul>
+                        <li><a href="#overview">Overview</a></li>
+                        <li><a href="#installation">Installation</a></li>
+                        <li><a href="#quick-start">Quick Start</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Backend API</h3>
+                    <ul>
+                        <li><a href="#database-schema">Database Schema</a></li>
+                        <li><a href="#user-api">User Management</a></li>
+                        <li><a href="#tileset-api">TileSet API</a></li>
+                        <li><a href="#entity-api">Entity API</a></li>
+                        <li><a href="#cluster-api">Cluster API</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Frontend</h3>
+                    <ul>
+                        <li><a href="#game-component">Game Component</a></li>
+                        <li><a href="#inventory-component">Inventory</a></li>
+                        <li><a href="#menu-components">Menu Components</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Core Classes</h3>
+                    <ul>
+                        <li><a href="#engine-class">Engine</a></li>
+                        <li><a href="#gmap-class">GMap</a></li>
+                        <li><a href="#entity-system">Entity System</a></li>
+                        <li><a href="#gpu-renderer">GPU Renderer</a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3>Advanced</h3>
+                    <ul>
+                        <li><a href="#webgpu-shaders">WebGPU Shaders</a></li>
+                        <li><a href="#performance">Performance</a></li>
+                        <li><a href="#error-handling">Error Handling</a></li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <div class="content">
+                <!-- Hero Section -->
+                <section id="overview" class="hero">
+                    <h1>Game Engine Documentation</h1>
+                    <p class="hero-subtitle">A comprehensive guide to building tile-based games with SolidJS and Convex</p>
+                    <div class="hero-features">
+                        <div class="feature-card">
+                            <div class="feature-icon">🚀</div>
+                            <h3>WebGPU Rendering</h3>
+                            <p>High-performance GPU-accelerated rendering with CPU fallback</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🌐</div>
+                            <h3>Real-time Multiplayer</h3>
+                            <p>Built-in multiplayer support with Convex real-time database</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🎨</div>
+                            <h3>Procedural Generation</h3>
+                            <p>Advanced noise-based world generation with clusters</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Technology Stack -->
+                <section class="tech-stack">
+                    <h2>Technology Stack</h2>
+                    <div class="tech-grid">
+                        <div class="tech-item">
+                            <strong>Frontend:</strong> SolidJS with Solid Start
+                        </div>
+                        <div class="tech-item">
+                            <strong>Backend:</strong> Convex (real-time database)
+                        </div>
+                        <div class="tech-item">
+                            <strong>Auth:</strong> Clerk Authentication
+                        </div>
+                        <div class="tech-item">
+                            <strong>Rendering:</strong> WebGPU + ROT.js
+                        </div>
+                        <div class="tech-item">
+                            <strong>Styling:</strong> TailwindCSS
+                        </div>
+                        <div class="tech-item">
+                            <strong>Package Manager:</strong> Bun
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Installation -->
+                <section id="installation" class="section">
+                    <h2>Installation</h2>
+                    <div class="code-block">
+                        <pre><code class="language-bash"># Install dependencies
+bun install
+
+# Set up environment variables
+cp .env.example .env.local
+# Configure CONVEX_URL and CLERK_PUBLISHABLE_KEY
+
+# Run development server
+bun run dev</code></pre>
+                    </div>
+                </section>
+
+                <!-- Quick Start -->
+                <section id="quick-start" class="section">
+                    <h2>Quick Start</h2>
+                    <p>Get up and running with the game engine in minutes:</p>
+                    <div class="code-block">
+                        <pre><code class="language-typescript">import { Engine } from "~/lib";
+import { ConvexClient } from "convex/browser";
+
+// Initialize Convex client
+const convex = new ConvexClient(process.env.CONVEX_URL);
+
+// Create game engine
+const engine = new Engine(1000, 1000, convex);
+
+// Start game
+await engine.start();
+await engine.renderDOM();</code></pre>
+                    </div>
+                </section>
+
+                <!-- Database Schema -->
+                <section id="database-schema" class="section">
+                    <h2>Database Schema</h2>
+                    <p>The game uses Convex with the following main tables:</p>
+                    
+                    <div class="schema-table">
+                        <h3>users</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>name</td>
+                                    <td>string</td>
+                                    <td>User's display name</td>
+                                </tr>
+                                <tr>
+                                    <td>externalId</td>
+                                    <td>string</td>
+                                    <td>Clerk user ID</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p><strong>Index:</strong> byExternalId</p>
+                    </div>
+
+                    <div class="schema-table">
+                        <h3>tileSets</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>width</td>
+                                    <td>number</td>
+                                    <td>Map width in tiles</td>
+                                </tr>
+                                <tr>
+                                    <td>height</td>
+                                    <td>number</td>
+                                    <td>Map height in tiles</td>
+                                </tr>
+                                <tr>
+                                    <td>createdAt</td>
+                                    <td>string</td>
+                                    <td>ISO timestamp</td>
+                                </tr>
+                                <tr>
+                                    <td>owner</td>
+                                    <td>Id&lt;"users"&gt;</td>
+                                    <td>Reference to user</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p><strong>Index:</strong> byOwner</p>
+                    </div>
+                </section>
+
+                <!-- User API -->
+                <section id="user-api" class="section">
+                    <h2>User Management API</h2>
+                    
+                    <div class="api-endpoint">
+                        <h3>users.current</h3>
+                        <div class="endpoint-meta">
+                            <span class="method query">Query</span>
+                            <span class="returns">Returns: User | null</span>
+                        </div>
+                        <p>Get current authenticated user</p>
+                        <div class="code-block">
+                            <pre><code class="language-typescript">const user = await convex.query(api.users.current);</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-endpoint">
+                        <h3>users.upsertFromClerk</h3>
+                        <div class="endpoint-meta">
+                            <span class="method mutation">Internal Mutation</span>
+                        </div>
+                        <p>Create or update user from Clerk webhook</p>
+                        <div class="params">
+                            <h4>Parameters:</h4>
+                            <ul>
+                                <li><code>data</code>: UserJSON - Clerk user data</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TileSet API -->
+                <section id="tileset-api" class="section">
+                    <h2>TileSet Management API</h2>
+                    
+                    <div class="api-endpoint">
+                        <h3>functions.getTileSet.getTileSet</h3>
+                        <div class="endpoint-meta">
+                            <span class="method query">Query</span>
+                            <span class="returns">Returns: {meta: TileSetMetadata, blocks: TileBlock[]}</span>
+                        </div>
+                        <p>Retrieve a complete tileset with metadata and blocks</p>
+                        <div class="params">
+                            <h4>Parameters:</h4>
+                            <ul>
+                                <li><code>tileSetId</code>: string - Tileset ID</li>
+                            </ul>
+                        </div>
+                        <div class="code-block">
+                            <pre><code class="language-typescript">const tileSet = await convex.query(api.functions.getTileSet.getTileSet, {
+  tileSetId: "kt1..."
+});</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="api-endpoint">
+                        <h3>functions.saveTileSet.createTileSet</h3>
+                        <div class="endpoint-meta">
+                            <span class="method mutation">Mutation</span>
+                            <span class="returns">Returns: TileSet ID</span>
+                        </div>
+                        <p>Create a new empty tileset</p>
+                        <div class="params">
+                            <h4>Parameters:</h4>
+                            <ul>
+                                <li><code>width</code>: number - Map width</li>
+                                <li><code>height</code>: number - Map height</li>
+                            </ul>
+                        </div>
+                        <div class="code-block">
+                            <pre><code class="language-typescript">const tileSetId = await convex.mutation(api.functions.saveTileSet.createTileSet, {
+  width: 1000,
+  height: 1000
+});</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Game Component -->
+                <section id="game-component" class="section">
+                    <h2>Game Component</h2>
+                    
+                    <div class="component-card">
+                        <h3>&lt;Game engine={Engine} /&gt;</h3>
+                        <p>Main game component that renders the game world</p>
+                        
+                        <div class="props">
+                            <h4>Props:</h4>
+                            <ul>
+                                <li><code>engine</code>: Engine - Game engine instance</li>
+                            </ul>
+                        </div>
+
+                        <div class="features">
+                            <h4>Features:</h4>
+                            <ul>
+                                <li>Renders game canvas</li>
+                                <li>Displays player stats (air level)</li>
+                                <li>Shows inventory</li>
+                                <li>Handles player hand items</li>
+                            </ul>
+                        </div>
+
+                        <div class="code-block">
+                            <pre><code class="language-tsx">import Game from "~/components/game";
+import { Engine } from "~/lib";
+
+function App() {
+  const engine = new Engine(1000, 1000, convex);
+  return &lt;Game engine={engine} /&gt;;
+}</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Engine Class -->
+                <section id="engine-class" class="section">
+                    <h2>Engine Class</h2>
+                    
+                    <div class="class-card">
+                        <h3>new Engine(width: number, height: number, convex: ConvexClient)</h3>
+                        <p>Main game engine that orchestrates all systems</p>
+                        
+                        <div class="constructor-params">
+                            <h4>Parameters:</h4>
+                            <ul>
+                                <li><code>width</code>: number - World width in tiles</li>
+                                <li><code>height</code>: number - World height in tiles</li>
+                                <li><code>convex</code>: ConvexClient - Convex client instance</li>
+                            </ul>
+                        </div>
+
+                        <div class="properties">
+                            <h4>Properties:</h4>
+                            <ul>
+                                <li><code>display</code>: ROT.Display - Rendering display</li>
+                                <li><code>mapBuilder</code>: GMap - Map generation and management</li>
+                                <li><code>player</code>: PlayerType - Player entity</li>
+                                <li><code>scheduler</code>: ROT.Scheduler - Game loop scheduler</li>
+                            </ul>
+                        </div>
+
+                        <div class="method">
+                            <h4>async start(): Promise&lt;void&gt;</h4>
+                            <p>Initialize and start the game engine</p>
+                            <div class="code-block">
+                                <pre><code class="language-typescript">const engine = new Engine(1000, 1000, convex);
+await engine.start();</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Performance -->
+                <section id="performance" class="section">
+                    <h2>Performance Considerations</h2>
+                    
+                    <div class="performance-tips">
+                        <h3>Optimization Tips</h3>
+                        <div class="tip-grid">
+                            <div class="tip-card">
+                                <div class="tip-icon">🎯</div>
+                                <h4>GPU Rendering</h4>
+                                <p>Enable WebGPU for better performance on supported devices</p>
+                            </div>
+                            <div class="tip-card">
+                                <div class="tip-icon">👁️</div>
+                                <h4>Viewport Culling</h4>
+                                <p>Only render visible tiles to improve performance</p>
+                            </div>
+                            <div class="tip-card">
+                                <div class="tip-icon">📦</div>
+                                <h4>Batch Updates</h4>
+                                <p>Use updateViewportTiles for multiple tile changes</p>
+                            </div>
+                            <div class="tip-card">
+                                <div class="tip-icon">🏊</div>
+                                <h4>Entity Pooling</h4>
+                                <p>Reuse entity instances when possible</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <footer class="footer">
+                    <p>&copy; 2024 Game Engine Documentation. Built with ❤️ for game developers.</p>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
