@@ -1,13 +1,13 @@
+import type { ConvexClient } from "convex/browser";
+import * as immutable from "immutable";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
+import { createMenuHolder, type MenuHolder } from "./inventory";
+import { KeyHandles } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
 import { Player, type PlayerType } from "./player";
-import { KeyHandles } from "./keyhandle";
-import { Vec2d, type State } from "./state";
-import * as immutable from "immutable";
-import type { Movable, Storeable } from "./entity";
-import type { ConvexClient } from "convex/browser";
-import { createMenuHolder, type MenuHolder } from "./inventory";
+import { type State, Vec2d } from "./state";
+import type { Movable, Storeable } from "./traits";
 
 export class Engine {
 	width: number;

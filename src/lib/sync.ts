@@ -1,6 +1,7 @@
-import type { Component } from "./comps";
-import type { Entity, Existable, Storeable } from "./entity";
 import { createStore, produce } from "solid-js/store";
+import type { Component } from "./comps";
+import type { Entity, Existable } from "./traits";
+import type { Storeable } from "./traits/storeable";
 
 export interface Syncable {
 	syncable: boolean;

@@ -1,10 +1,10 @@
-import type { Engine } from "./index";
-import type { Act } from "./action";
-import type { Entity, Movable } from "./entity";
-import { Items, type Inventory } from "./inventory";
-import { Vec2d } from "./state";
 import InventoryViewer from "~/components/inventoryView";
-import { PlayerType } from "./player";
+import type { Act } from "./action";
+import type { Engine } from "./index";
+import { type Inventory, Items } from "./inventory";
+import type { PlayerType } from "./player";
+import { Vec2d } from "./state";
+import type { Entity, Movable } from "./traits";
 
 const moveUpAction: Act = {
 	perform: async (e: Engine, actor: Movable): Promise<void> => {

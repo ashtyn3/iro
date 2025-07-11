@@ -1,34 +1,34 @@
 // entity.ts
-import { Engine } from "./index";
+
 import * as immutable from "immutable";
-import { Vec2d } from "./state";
-import type { Item } from "./inventory";
-import { Inventory } from "./inventory";
+import SuperJSON from "superjson";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
-	applyMixins,
 	type AddedOf,
+	applyMixins,
 	type Component,
 	type ParamsOf,
 	type UnionToIntersection,
 } from "./comps";
+import type { Engine } from "./index";
+import type { Item } from "./inventory";
+import { Inventory } from "./inventory";
 import { VIEWPORT } from "./map";
-import { api } from "../../convex/_generated/api";
-import { Syncable } from "./sync";
 import { Air } from "./player";
-import SuperJSON from "superjson";
-import type { Id } from "../../convex/_generated/dataModel";
+import { Vec2d } from "./state";
+import { Syncable } from "./sync";
+import {
+	Collectable,
+	Destructible,
+	type Entity,
+	type Existable,
+	Movable,
+	Renderable,
+	Storeable,
+} from "./traits";
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
-
-export interface Existable {
-	engine: Engine;
-}
-
-export interface Entity extends Existable {
-	char: string;
-	fg?: string;
-	bg?: string;
-}
 
 export function createEntity(
 	e: Engine,
@@ -43,159 +43,6 @@ export function createEntity(
 		bg,
 	};
 }
-
-export interface Renderable extends Existable {
-	render: () => void;
-}
-
-export const Renderable: Component<Renderable, () => void> = (base, render) => {
-	const e = base as Entity & Renderable;
-	e.render = render;
-	return e;
-};
-
-export interface Movable extends Entity {
-	position: Vec2d;
-	move: (delta: Vec2d) => void;
-}
-
-export const Movable: Component<Movable, Vec2d> = (base, init) => {
-	const e = base as Entity & Movable;
-
-	e.position = init;
-	e.move = (delta: Vec2d): void => {
-		const newX = e.position.x + delta.x;
-		const newY = e.position.y + delta.y;
-
-		const oldPositionKey = e.position;
-		const newPositionKey = Vec2d({ x: newX, y: newY }); // Create new Immutable Vec2d Record for potential new key
-
-		if (
-			newY >= e.engine.height ||
-			newX >= e.engine.width ||
-			newX < 0 ||
-			newY < 0
-		)
-			return;
-		if (e.engine.mapBuilder.tiles[newX][newY].boundary) return;
-
-		if (oldPositionKey.equals(newPositionKey)) {
-			return;
-		}
-		e.position = newPositionKey;
-	};
-
-	return e;
-};
-
-export interface Destructible extends Entity {
-	health: number;
-	damage(amount: number): void;
-}
-export const Destructible: Component<Destructible, number> = (
-	base,
-	initialHealth,
-) => {
-	const e = base as Entity & Destructible;
-	// cast once to the widened type
-	// add your data & methods
-	e.health = initialHealth;
-	e.damage = (amt: number) => {
-		e.health -= amt;
-	};
-	return e;
-};
-
-export interface Collectable extends Entity {
-	collect: (item: Item, amount: number) => boolean;
-}
-
-export const Collectable: Component<Collectable, {}> = (base) => {
-	// cast once to the widened type
-	const e = base as Entity & Collectable;
-	e.collect = (item: Item, amount: number): boolean => {
-		// for (let i = 0; i < base.engine.player.Items.length; i++) {
-		// 	const slot = base.engine.player.Items[i];
-		// 	if (slot !== undefined) {
-		// 		if (slot.item && slot.item.name === item.name) {
-		// 			slot.count += amount;
-		// 			base.engine.player.update({ Items: [...base.engine.player.Items] });
-		// 			return true;
-		// 		}
-		// 	}
-		// }
-
-		// const findEmptySlot = (): number => {
-		// 	for (let i = 0; i < base.engine.player.Items.length; i++) {
-		// 		if (
-		// 			base.engine.player.Items[i] === undefined ||
-		// 			base.engine.player.Items[i].item.name === "none"
-		// 		) {
-		// 			return i;
-		// 		}
-		// 	}
-		// 	return -1;
-		// };
-
-		// const emptyIdx = findEmptySlot();
-		// if (emptyIdx === -1) {
-		// 	return false;
-		// }
-
-		// base.engine.player.Items[emptyIdx] = {
-		// 	count: amount,
-		// 	item,
-		// };
-		base.engine.player.put({ count: amount, item: item });
-		base.engine.player.update({ Items: [...base.engine.player.Items] });
-		return true;
-	};
-	return e;
-};
-
-export interface Storeable extends Entity {
-	store: () => Promise<void>;
-	id: string;
-	serialize: () => any;
-	deserialize: (data: any) => void;
-	sync: () => Promise<void>;
-}
-
-export const Storeable: Component<Storeable, string> = (base, init) => {
-	let e = base as Entity & Storeable & Syncable;
-	e.id = init;
-
-	e.sync = async () => {
-		const state = await e.engine.convex.query(
-			api.functions.entityStates.getEntityState,
-			{
-				tileSetId: e.engine.mapBuilder.mapId as Id<"tileSets">,
-				entityId: e.id,
-			},
-		);
-		if (state) {
-			deserializeEntity(e.engine, SuperJSON.parse(state), e);
-		}
-	};
-
-	e.serialize = () => {
-		const { engine, ...serializableEntity } = e;
-		return serializableEntity;
-	};
-
-	e.deserialize = (data: any) => {
-		Object.assign(e, data);
-	};
-
-	e.store = async () => {
-		await e.engine.convex.mutation(api.functions.entityStates.saveEntityState, {
-			tileSetId: e.engine.mapBuilder.mapId as Id<"tileSets">,
-			entityId: e.id,
-			state: SuperJSON.stringify(e.serialize()),
-		});
-	};
-	return e;
-};
 
 export class EntityBuilder<M extends Array<Component<any, any>> = []> {
 	private entries: Array<[Component<any, any>, any]>;
@@ -230,8 +77,8 @@ export function promote(
 	params?: { [key: string]: any },
 ): Entity {
 	const tile = e.mapBuilder.tiles[pos.x][pos.y];
-	let entity: Entity = createEntity(e, tile.char, tile.fg, tile.bg);
-	let builder = new EntityBuilder(entity);
+	const entity: Entity = createEntity(e, tile.char, tile.fg, tile.bg);
+	const builder = new EntityBuilder(entity);
 
 	const make_entity = (type: string) => {
 		type.split(",").forEach((t) => {
@@ -251,8 +98,9 @@ export function promote(
 		} else if (tile.promotable) {
 			make_entity(tile.promotable.type);
 		}
-		e.state.entities = e.state.entities.set(pos, entity);
-		return builder.build();
+		const builtEntity = builder.build() as Entity;
+		e.state.entities = e.state.entities.set(pos, builtEntity);
+		return builtEntity;
 	}
 	return entity;
 }
@@ -284,7 +132,7 @@ export function deserializeEntity(
 		builder.add(Air, {});
 	}
 
-	if (data.syncable && existingEntity?.syncable === undefined) {
+	if (data.syncable && !(existingEntity as any)?.syncable) {
 		builder.add(Syncable, data.id);
 	}
 
@@ -292,7 +140,7 @@ export function deserializeEntity(
 		builder.add(Storeable, data.id);
 	}
 
-	const builtEntity = builder.build();
+	const builtEntity = builder.build() as Entity;
 
 	if (existingEntity) {
 		Object.assign(existingEntity, builtEntity);

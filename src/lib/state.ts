@@ -1,8 +1,8 @@
-import type { Cluster, Clusters, Tile } from "./map";
-import type { Entity, Movable } from "./entity";
+import type { ConvexClient } from "convex/browser";
 import * as immutable from "immutable";
 import { api } from "../../convex/_generated/api";
-import type { ConvexClient } from "convex/browser";
+import type { Cluster, Clusters, Tile } from "./map";
+import type { Entity, Movable } from "./traits";
 
 export interface IVec2d {
 	x: number;

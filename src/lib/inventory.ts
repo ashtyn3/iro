@@ -1,21 +1,20 @@
-import type { Engine } from "./index";
+import type { JSX } from "solid-js";
 import type { Act } from "./action";
 import type { Component } from "./comps";
-import {
-	type Entity,
-	type Movable,
-	promote,
-	type Collectable,
-	type Destructible,
-	type Existable,
-	type Renderable,
-	EntityBuilder,
-} from "./entity";
+import { EntityBuilder, promote } from "./entity";
+import type { Engine } from "./index";
 import { TileKinds, VIEWPORT } from "./map";
+import type { Air } from "./player";
 import { DB, Vec2d } from "./state";
-import type { JSX } from "solid-js";
 import { Syncable } from "./sync";
-import { Air } from "./player";
+import type {
+	Collectable,
+	Destructible,
+	Entity,
+	Existable,
+	Movable,
+	Renderable,
+} from "./traits";
 
 export interface Item extends Act {
 	name: string;
@@ -104,7 +103,7 @@ export const Items: { [key: string]: Item } = {
 		perform: async (e: Engine, actor: Movable): Promise<void> => {
 			if (e.state.currentCluster?.kind === TileKinds.tree) {
 				const tile = e.mapBuilder.tiles[actor.position.x][actor.position.y];
-				let positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
+				const positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
 
 				if (!e.state.entities.has(positionKey)) {
 					promote(e, positionKey);

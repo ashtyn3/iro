@@ -1,4 +1,4 @@
-import type { Entity, Existable } from "./entity";
+import type { Entity, Existable } from "./traits";
 
 export type Component<Added, P = {}> = (
 	base: Existable,

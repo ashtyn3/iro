@@ -1,16 +1,11 @@
-import type { Engine } from "./index";
 import type { Component } from "./comps";
-import {
-	createEntity,
-	Entity,
-	EntityBuilder,
-	Movable,
-	Renderable,
-	Storeable,
-} from "./entity";
-import { Inventory, Items, type Item } from "./inventory";
+import { createEntity, EntityBuilder } from "./entity";
+import type { Engine } from "./index";
+import { Inventory, type Item, Items } from "./inventory";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync";
+import type { Entity } from "./traits";
+import { Movable, Renderable, Storeable } from "./traits";
 
 const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") =>
 	new EntityBuilder(createEntity(e, char))
