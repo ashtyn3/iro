@@ -5,10 +5,43 @@ import { Inventory, type Item, Items } from "./inventory";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync";
 import type { Entity } from "./traits";
-import { Movable, Renderable, Storeable } from "./traits";
+import {
+	Event,
+	Movable,
+	Renderable,
+	Storeable,
+	secondsToFrames,
+	Timed,
+} from "./traits";
 
-const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") =>
-	new EntityBuilder(createEntity(e, char))
+const timingChain = (e: Engine) =>
+	Event("AirRadius", secondsToFrames(1), () => {
+		if (e.player.air !== 0) {
+			e.mapBuilder.VIEW_RADIUS = Math.floor((e.player.air / 100) * 10);
+		}
+
+		if (e.player.air === 0) {
+			e.mapBuilder.VIEW_RADIUS = 0;
+		}
+	})
+		.and("AirReduce", secondsToFrames(2), () => {
+			if (e.player.air !== 0) {
+				e.player.air -= 10;
+				e.player.update({ air: e.player.air });
+			}
+		})
+		.and("AirFlicker1", 15, () => {
+			if (e.player.air === 0) {
+				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS ^ 1;
+			}
+		})
+		.and("AirFlicker2", 20, () => {
+			if (e.player.air === 0) {
+				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS ^ 2;
+			}
+		});
+const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {
+	return new EntityBuilder(createEntity(e, char))
 		.add(Movable, Vec2d({ x: 4, y: 10 }))
 		.add(Inventory, {
 			slots: 6,
@@ -25,9 +58,18 @@ const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") =>
 		.add(Air, {})
 		.add(Syncable, "player")
 		.add(Storeable, "player")
-		.add(Renderable, () => {});
+		.add(Renderable, () => {})
+		.add(Timed, timingChain(e));
+};
 
-export type PlayerType = ReturnType<ReturnType<typeof playerBuilder>["build"]>;
+export type PlayerType = Entity &
+	Movable &
+	Inventory &
+	Air &
+	Syncable &
+	Storeable &
+	Renderable &
+	Timed;
 
 export const Player = (
 	e: Engine,

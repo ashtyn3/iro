@@ -2,6 +2,7 @@ import type { ConvexClient } from "convex/browser";
 import * as immutable from "immutable";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
+import { Clock } from "./clock";
 import { createMenuHolder, type MenuHolder } from "./inventory";
 import { KeyHandles } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
@@ -23,6 +24,7 @@ export class Engine {
 	cycles: number = 0;
 	convex: ConvexClient;
 	menuHolder: MenuHolder;
+	clockSystem: Clock;
 
 	constructor(w: number, h: number, convex: ConvexClient) {
 		this.width = w;
@@ -46,6 +48,7 @@ export class Engine {
 			this.mapBuilder.useGPU = true;
 		}
 		this.scheduler = new SimpleScheduler();
+		this.clockSystem = new Clock(this);
 		this.player = Player(this, "@", "right");
 
 		this.engine = new ROT.Engine(this.scheduler);
@@ -59,45 +62,11 @@ export class Engine {
 	async start() {
 		await this.player.sync();
 		this.player.update({ ...this.player });
-		this.clock = 60;
 		const actor = {
 			act: () => {
 				const player_vec = this.player.position;
 				const cluster = this.mapBuilder.getClusterAt(player_vec);
 				this.state.currentCluster = cluster || null;
-				if (this.clock === 0) {
-					if (this.player.air !== 0) {
-						this.mapBuilder.VIEW_RADIUS = Math.floor(
-							(this.player.air / 100) * 10,
-						);
-						if (this.cycles % 2 === 0) {
-							this.player.air -= 10;
-							this.player.update({ air: this.player.air });
-						}
-					}
-
-					if (this.player.air === 0) {
-						this.mapBuilder.VIEW_RADIUS = 0;
-					}
-					this.clock = 60;
-					this.cycles += 1;
-				} else {
-					if (this.clock === 20) {
-						if (this.player.air === 0) {
-							this.mapBuilder.VIEW_RADIUS = this.mapBuilder.VIEW_RADIUS ^ 1;
-						}
-					}
-					if (this.clock === 30) {
-						if (this.player.air === 0) {
-							this.mapBuilder.VIEW_RADIUS = this.mapBuilder.VIEW_RADIUS ^ 2;
-						}
-					}
-					this.clock -= 1;
-				}
-				if (this.cycles === 100) {
-					this.cycles = 0;
-				}
-				// world‐update logic goes here…
 				this.engine.lock();
 			},
 		};
@@ -136,6 +105,7 @@ export class Engine {
 		window.onbeforeunload = () => confirm("Confirm refresh");
 
 		const frame = async () => {
+			this.clockSystem.act();
 			this.engine.unlock();
 			await this.render();
 			requestAnimationFrame(frame);

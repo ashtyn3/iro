@@ -1,9 +1,5 @@
 // entity.ts
 
-import * as immutable from "immutable";
-import SuperJSON from "superjson";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 import {
 	type AddedOf,
 	applyMixins,
@@ -12,9 +8,7 @@ import {
 	type UnionToIntersection,
 } from "./comps";
 import type { Engine } from "./index";
-import type { Item } from "./inventory";
 import { Inventory } from "./inventory";
-import { VIEWPORT } from "./map";
 import { Air } from "./player";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync";
@@ -24,8 +18,8 @@ import {
 	type Entity,
 	type Existable,
 	Movable,
-	Renderable,
 	Storeable,
+	Timed,
 } from "./traits";
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
@@ -119,6 +113,9 @@ export function deserializeEntity(
 	}
 	if (data.health !== undefined) {
 		builder.add(Destructible, data.health);
+	}
+	if (data.act !== undefined) {
+		builder.add(Timed, data.act);
 	}
 	if (data.Items !== undefined || data.slots !== undefined) {
 		builder.add(Inventory, {
