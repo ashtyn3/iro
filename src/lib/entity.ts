@@ -1,5 +1,6 @@
 // entity.ts
 
+import * as immutable from "immutable";
 import {
 	type AddedOf,
 	applyMixins,
@@ -24,6 +25,36 @@ import {
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
 
+export class EntityRegistry {
+	static instance: EntityRegistry = new EntityRegistry();
+
+	private CtoE: immutable.Map<immutable.Set<symbol>, Entity> = immutable.Map();
+
+	register(entity: Entity) {
+		this.CtoE = this.CtoE.set(entity._components, entity);
+	}
+
+	lookup(components: immutable.Set<symbol>): Array<Entity> {
+		const matching = this.CtoE.filter((e) => {
+			return components.isSubset(e._components);
+		}).valueSeq();
+		return matching.toArray();
+	}
+	singleLookup<M extends Array<Component<any, any>>>(
+		components: M,
+	): UnionToIntersection<AddedOf<M[number]>> | undefined {
+		return this.CtoE.filter((e) => {
+			return components.every((c) => e._components.has(Symbol.for(c.name)));
+		}).first() as any;
+	}
+
+	lookupByName(name: string) {
+		return this.CtoE.filter((e) => {
+			return e._components.has(Symbol.for(name));
+		}).first();
+	}
+}
+
 export function createEntity(
 	e: Engine,
 	char: string,
@@ -35,6 +66,7 @@ export function createEntity(
 		char: char,
 		fg,
 		bg,
+		_components: immutable.Set(),
 	};
 }
 
@@ -61,7 +93,9 @@ export class EntityBuilder<M extends Array<Component<any, any>> = []> {
 	}
 
 	build(): Existable & UnionToIntersection<AddedOf<M[number]>> {
-		return applyMixins(this.base, ...this.entries) as any;
+		const entity = applyMixins(this.base, ...this.entries) as any;
+		EntityRegistry.instance.register(entity);
+		return entity;
 	}
 }
 

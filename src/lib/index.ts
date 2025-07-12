@@ -4,12 +4,19 @@ import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
 import { Clock } from "./clock";
 import { Debug } from "./debug";
-import { createMenuHolder, type MenuHolder } from "./inventory";
+import { EntityRegistry } from "./entity";
+import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
 import { KeyHandles } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
 import { Player, type PlayerType } from "./player";
 import { type State, Vec2d } from "./state";
-import type { Movable, Storeable } from "./traits";
+import {
+	Destructible,
+	type Movable,
+	Name,
+	Named,
+	type Storeable,
+} from "./traits";
 
 export class Engine {
 	width: number;
@@ -62,6 +69,8 @@ export class Engine {
 			entities: immutable.Map(),
 		};
 		this.menuHolder = createMenuHolder(this);
+		const player = EntityRegistry.instance.singleLookup([Name("player")]);
+		console.log(player);
 	}
 
 	async start() {
@@ -110,6 +119,9 @@ export class Engine {
 		window.onbeforeunload = () => confirm("Confirm refresh");
 
 		const frame = async () => {
+			// timed.forEach((e) => {
+			// 	e.act();
+			// });
 			this.clockSystem.act();
 			this.engine.unlock();
 			await this.render();

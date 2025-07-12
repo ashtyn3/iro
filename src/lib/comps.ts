@@ -23,5 +23,8 @@ export function applyMixins<M extends Array<Component<any, any>>>(
 		[K in keyof M]: [fn: M[K], params: ParamsOf<M[K]>];
 	}
 ): Existable & UnionToIntersection<AddedOf<M[number]>> {
-	return entries.reduce((ent, [fn, p]) => fn(ent, p), base) as any;
+	return entries.reduce((ent, [fn, p]) => {
+		ent._components = ent._components.add(Symbol.for(fn.name));
+		return fn(ent, p);
+	}, base) as any;
 }

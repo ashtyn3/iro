@@ -1,5 +1,5 @@
 import type { Component } from "./comps";
-import { createEntity, EntityBuilder } from "./entity";
+import { createEntity, EntityBuilder, EntityRegistry } from "./entity";
 import type { Engine } from "./index";
 import { Inventory, type Item, Items } from "./inventory";
 import { Vec2d } from "./state";
@@ -8,6 +8,7 @@ import type { Entity } from "./traits";
 import {
 	Event,
 	Movable,
+	Named,
 	Renderable,
 	Storeable,
 	secondsToFrames,
@@ -59,7 +60,8 @@ const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {
 		.add(Syncable, "player")
 		.add(Storeable, "player")
 		.add(Renderable, () => {})
-		.add(Timed, timingChain(e));
+		.add(Timed, timingChain(e))
+		.add(Named, { name: "player" });
 };
 
 export type PlayerType = Entity &
@@ -69,7 +71,8 @@ export type PlayerType = Entity &
 	Syncable &
 	Storeable &
 	Renderable &
-	Timed;
+	Timed &
+	Named;
 
 export const Player = (
 	e: Engine,
@@ -83,6 +86,7 @@ export const Player = (
 		const py = built.position.y - vp.y;
 		e.display.drawOver(px, py, built.char, "#FFF", null);
 	};
+
 	return built;
 };
 

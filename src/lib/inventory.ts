@@ -1,3 +1,4 @@
+import * as immutable from "immutable";
 import type { JSX } from "solid-js";
 import type { Act } from "./action";
 import type { Component } from "./comps";
@@ -249,7 +250,7 @@ export const MenuHolder: Component<MenuHolder, { menu: () => JSX.Element }> = (
 };
 
 export const createMenuHolder = (engine: Engine) => {
-	const e: Existable = { engine };
+	const e: Existable = { engine, _components: immutable.Set() };
 	const built = new EntityBuilder(e)
 		.add(MenuHolder, {
 			menu: () => null,
