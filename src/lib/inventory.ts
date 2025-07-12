@@ -2,19 +2,19 @@ import * as immutable from "immutable";
 import type { JSX } from "solid-js";
 import type { Act } from "./action";
 import type { Component } from "./comps";
-import { EntityBuilder, promote } from "./entity";
+import { EntityBuilder, EntityRegistry, promote } from "./entity";
 import type { Engine } from "./index";
 import { TileKinds, VIEWPORT } from "./map";
 import type { Air } from "./player";
 import { DB, Vec2d } from "./state";
 import { Syncable } from "./sync";
-import type {
+import {
 	Collectable,
 	Destructible,
-	Entity,
-	Existable,
+	type Entity,
+	type Existable,
 	Movable,
-	Renderable,
+	type Renderable,
 } from "./traits";
 
 export interface Item extends Act {
@@ -25,6 +25,21 @@ export interface Item extends Act {
 
 export const assetPath = async (name: string) => {
 	return (await import(`~/lib/assets/${name}.png`)).default;
+};
+export const getUnderneath = (e: Engine, pos: Vec2d) => {
+	const query = () =>
+		EntityRegistry.instance.lookupAndQuery(
+			[Movable, Destructible, Collectable],
+			(e) => {
+				return e.position.equals(pos);
+			},
+		);
+	let entity = query()[0];
+	if (!entity) {
+		promote(e, pos);
+		entity = query()[0];
+	}
+	return entity;
 };
 export const Items: { [key: string]: Item } = {
 	empty: {
@@ -39,7 +54,10 @@ export const Items: { [key: string]: Item } = {
 		name: "o2",
 		sprite: [await assetPath("o2"), await assetPath("o2")],
 		usable: true,
-		perform: async (e: Engine, actor: Movable & Air): Promise<void> => {
+		perform: async (
+			e: Engine,
+			actor: Movable & Air & Syncable,
+		): Promise<void> => {
 			actor.air += 10;
 			if (actor.air > 100) {
 				actor.air = 100;
@@ -59,13 +77,7 @@ export const Items: { [key: string]: Item } = {
 				const tile = e.mapBuilder.tiles[actor.position.x][actor.position.y];
 				const positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
 
-				if (!e.state.entities.has(positionKey)) {
-					promote(e, positionKey);
-				}
-
-				const entity = e.state.entities.get(positionKey) as Entity &
-					Destructible &
-					Collectable;
+				const entity = getUnderneath(e, positionKey);
 
 				entity.damage(7.5);
 
@@ -88,7 +100,13 @@ export const Items: { [key: string]: Item } = {
 					}
 
 					entity.collect(Items.wood, Math.trunc(Math.random() * 5 + 1));
-					e.state.entities = e.state.entities.delete(positionKey);
+					EntityRegistry.instance.deleteAndQuery(
+						[Movable, Destructible, Collectable],
+						(e) => {
+							return e.position.equals(positionKey);
+						},
+					);
+
 					for (const up of tileUpdates) {
 						await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
 					}
@@ -106,13 +124,7 @@ export const Items: { [key: string]: Item } = {
 				const tile = e.mapBuilder.tiles[actor.position.x][actor.position.y];
 				const positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
 
-				if (!e.state.entities.has(positionKey)) {
-					promote(e, positionKey);
-				}
-
-				const entity = e.state.entities.get(positionKey) as Entity &
-					Destructible &
-					Collectable;
+				const entity = getUnderneath(e, positionKey);
 				entity.damage(3);
 
 				if (entity.health <= 0) {
@@ -134,7 +146,13 @@ export const Items: { [key: string]: Item } = {
 					}
 
 					entity.collect(Items.wood, Math.trunc(Math.random() * 5 + 1));
-					e.state.entities = e.state.entities.delete(positionKey);
+					EntityRegistry.instance.deleteAndQuery(
+						[Movable, Destructible, Collectable],
+						(e) => {
+							return e.position.equals(positionKey);
+						},
+					);
+
 					for (const up of tileUpdates) {
 						await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
 					}

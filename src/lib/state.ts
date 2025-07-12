@@ -38,7 +38,6 @@ export function removeEntityFromMap(
 
 export interface State {
 	currentCluster: Cluster | null;
-	entities: immutable.Map<Vec2d, Entity>;
 }
 
 export interface ClustersSchema {

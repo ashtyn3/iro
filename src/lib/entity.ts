@@ -47,6 +47,25 @@ export class EntityRegistry {
 			return components.every((c) => e._components.has(Symbol.for(c.name)));
 		}).first() as any;
 	}
+	lookupAndQuery<M extends Array<Component<any, any>>>(
+		components: M,
+		query: (entity: UnionToIntersection<AddedOf<M[number]>>) => any,
+	): UnionToIntersection<AddedOf<M[number]>>[] {
+		const entities = this.lookup(
+			immutable.Set(components.map((c) => Symbol.for(c.name))),
+		);
+		return entities.filter((e) => query(e as any)) as any;
+	}
+
+	deleteAndQuery<M extends Array<Component<any, any>>>(
+		components: M,
+		query: (entity: UnionToIntersection<AddedOf<M[number]>>) => any,
+	) {
+		const entities = this.lookupAndQuery(components, query);
+		entities.forEach((e) => {
+			this.CtoE = this.CtoE.delete((e as any)._components);
+		});
+	}
 
 	lookupByName(name: string) {
 		return this.CtoE.filter((e) => {
@@ -120,6 +139,7 @@ export function promote(
 			}
 		});
 	};
+	builder.add(Movable, Vec2d(pos));
 	if (tile.mask) {
 		if (tile.mask.promotable) {
 			make_entity(tile.mask.promotable.type);
@@ -127,7 +147,6 @@ export function promote(
 			make_entity(tile.promotable.type);
 		}
 		const builtEntity = builder.build() as Entity;
-		e.state.entities = e.state.entities.set(pos, builtEntity);
 		return builtEntity;
 	}
 	return entity;

@@ -30,6 +30,7 @@ export const Movable: Component<Movable, Vec2d> = (base, init) => {
 		if (oldPositionKey.equals(newPositionKey)) {
 			return;
 		}
+
 		e.position = newPositionKey;
 	};
 

@@ -42,7 +42,7 @@ export class Debug {
 	log(message: any, level: LogLevel = "info") {
 		if (logLevelSeries[level] >= logLevelSeries[this.logLevel]) {
 			if (level === "prod") {
-				console.log(`[${level}]`, message);
+				console.info(`[${level}]`, message);
 			} else {
 				console[level](`[${level}]`, message);
 			}

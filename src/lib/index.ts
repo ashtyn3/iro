@@ -73,11 +73,8 @@ export class Engine {
 		this.engine = new ROT.Engine(this.scheduler);
 		this.state = {
 			currentCluster: null,
-			entities: immutable.Map(),
 		};
 		this.menuHolder = createMenuHolder(this);
-		const player = EntityRegistry.instance.singleLookup([Name("player")]);
-		this.debug.info(player);
 	}
 
 	async start() {
