@@ -9,10 +9,10 @@ type LogLevel = "info" | "warn" | "error" | "debug" | "prod";
 type LogLevelSeries = Record<LogLevel, number>;
 
 const logLevelSeries: LogLevelSeries = {
-	info: 0,
-	warn: 1,
-	error: 2,
-	debug: 3,
+	debug: 0,
+	info: 1,
+	warn: 2,
+	error: 3,
 	prod: 4,
 };
 
@@ -39,38 +39,44 @@ export class Debug {
 		return Debug.instance;
 	}
 
-	log(message: string, level: LogLevel = "info") {
-		if (
-			logLevelSeries[level] >= logLevelSeries[this.logLevel] &&
-			this.logLevel !== "prod"
-		) {
-			console[level](`[${level}] ${message}`);
+	log(message: any, level: LogLevel = "info") {
+		if (logLevelSeries[level] >= logLevelSeries[this.logLevel]) {
+			if (level === "prod") {
+				console.log(`[${level}]`, message);
+			} else {
+				console[level](`[${level}]`, message);
+			}
 		}
-		axiom.ingest("iro", {
-			message,
-			level: level,
-			timestamp: new Date().toISOString(),
-			trace: new Error().stack,
-			sessionStart: this.sessionStart.toISOString(),
-			metadata: {
-				mapId: this.engine?.mapBuilder.mapId,
-			},
-		});
+		if (import.meta.env.PROD && level !== "prod") {
+			axiom.ingest("iro", {
+				message,
+				level: level,
+				timestamp: new Date().toISOString(),
+				trace: new Error().stack,
+				sessionStart: this.sessionStart.toISOString(),
+				metadata: {
+					mapId: this.engine?.mapBuilder.mapId,
+				},
+			});
+		}
 	}
 
-	info(message: string) {
+	info(message: any) {
 		this.log(message, "info");
 	}
 
-	warn(message: string) {
+	warn(message: any) {
 		this.log(message, "warn");
 	}
 
-	error(message: string) {
+	error(message: any) {
 		this.log(message, "error");
 	}
 
-	debug(message: string) {
+	debug(message: any) {
 		this.log(message, "debug");
+	}
+	prod(message: any) {
+		this.log(message, "prod");
 	}
 }

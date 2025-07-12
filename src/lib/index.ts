@@ -41,7 +41,14 @@ export class Engine {
 		this.convex = convex;
 
 		// Initialize debug system
-		this.debug = Debug.getInstance(this, { logLevel: "prod" });
+		if (import.meta.env.DEV) {
+			this.debug = Debug.getInstance(this, { logLevel: "debug" });
+		} else {
+			this.debug = Debug.getInstance(this, { logLevel: "prod" });
+		}
+		this.debug.prod(
+			"Iro is open source! https://github.com/ashtyn3/iro go peep the code over there!",
+		);
 
 		const TILES_X = VIEWPORT.x;
 		const TILES_Y = VIEWPORT.y;
@@ -70,7 +77,7 @@ export class Engine {
 		};
 		this.menuHolder = createMenuHolder(this);
 		const player = EntityRegistry.instance.singleLookup([Name("player")]);
-		console.log(player);
+		this.debug.info(player);
 	}
 
 	async start() {
