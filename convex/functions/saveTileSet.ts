@@ -1,8 +1,28 @@
 import type { Tile } from "$lib/map";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
-import { internalMutation, mutation } from "../_generated/server";
+import { internalMutation, mutation, query } from "../_generated/server";
 
+export const canMakeMap = query(async ({ db, auth }) => {
+	const user = await auth.getUserIdentity();
+	if (!user) throw new Error("Not signed in");
+	const u = await db
+		.query("users")
+		.withIndex("byExternalId", (q) => q.eq("externalId", user.subject))
+		.unique();
+	if (!u) throw new Error("User record missing");
+	const t = await db
+		.query("tileSets")
+		.withIndex("byOwner", (q) => q.eq("owner", u._id))
+		.collect();
+	if (t.length > 0)
+		return {
+			state: false,
+			message: "You already have a map. Delete it to create a new one.",
+		};
+
+	return { state: true, message: "You can create a new map" };
+});
 // 1) Create just the tileset record
 export const createTileSet = mutation(
 	async (

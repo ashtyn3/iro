@@ -2,6 +2,7 @@ import SuperJSON from "superjson";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { Component } from "../comps";
+import { deserializeEntity } from "../entity";
 import type { Syncable } from "../sync";
 import type { Entity, Existable } from "./types";
 
@@ -26,8 +27,6 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 			},
 		);
 		if (state) {
-			// Import the deserializeEntity function from the main entity file
-			const { deserializeEntity } = await import("../entity");
 			deserializeEntity(e.engine, SuperJSON.parse(state), e);
 		}
 	};

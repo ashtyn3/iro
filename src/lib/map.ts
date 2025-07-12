@@ -1,5 +1,6 @@
 import type { ConvexClient } from "convex/browser";
 import { createNoise2D } from "simplex-noise";
+import { api } from "~/convex/_generated/api";
 import { GPURenderer } from "./gpu";
 import type { Engine } from "./index";
 import { DB, Vec2d } from "./state";
@@ -210,7 +211,14 @@ export class GMap {
 			this.writeQueue = [];
 		}
 	}
-	async genMap(): Promise<boolean> {
+	async genMap(): Promise<{ state: boolean; message: string }> {
+		const canMakeMap = await this.convex.query(
+			api.functions.saveTileSet.canMakeMap,
+			{},
+		);
+		if (!canMakeMap.state) {
+			return { state: false, message: canMakeMap.message };
+		}
 		const noise1 = createNoise2D(Math.random);
 		const noise2 = createNoise2D(Math.random);
 		const noise3 = createNoise2D(Math.random);
@@ -303,7 +311,7 @@ export class GMap {
 		this.engine.debug.info("finish map assignments");
 		await this.buildClusters();
 		this.engine.debug.info("finish clusters");
-		return true;
+		return { state: true, message: "Map created" };
 	}
 
 	public async loadMap(id: string): Promise<boolean> {

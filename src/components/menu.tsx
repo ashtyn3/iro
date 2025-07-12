@@ -24,6 +24,7 @@ export default function Menu() {
 	>("Menu");
 	const [importFileInput, setImportFileInput] =
 		createSignal<HTMLInputElement | null>(null);
+	const [engine, setEngine] = createSignal<Engine | null>(null);
 
 	const fetchToken = async ({
 		forceRefreshToken,
@@ -69,20 +70,39 @@ export default function Menu() {
 	};
 
 	const handleNewGame = async () => {
+		if (!convex) return;
 		setCurrentState("loading");
 		// TODO: Implement new game logic
-		await engine.mapBuilder.genMap();
-		setCurrentState("game");
+		try {
+			const newEngine = new Engine(350, 350, convex);
+			setEngine(newEngine);
+			const result = await newEngine.mapBuilder.genMap();
+			if (!result.state) {
+				alert(result.message);
+				setCurrentState("select");
+				return;
+			}
+			setCurrentState("game");
+		} catch (error) {
+			Debug.getInstance().error(`Failed to generate map: ${error}`);
+			setCurrentState("select");
+		}
 	};
-	const engine = new Engine(350, 350, convex!);
 
 	const handleLoadGame = async (tileSetId: string) => {
-		if (!tileSetId) return;
+		if (!convex || !tileSetId) return;
 		setCurrentState("loading");
-		Debug.getInstance().info(`Loading tileSetId: ${tileSetId}`);
-		engine.mapBuilder.mapId = tileSetId;
-		await engine.mapBuilder.loadMap(tileSetId);
-		setCurrentState("game");
+		try {
+			const newEngine = new Engine(350, 350, convex);
+			setEngine(newEngine);
+			Debug.getInstance().info(`Loading tileSetId: ${tileSetId}`);
+			newEngine.mapBuilder.mapId = tileSetId;
+			await newEngine.mapBuilder.loadMap(tileSetId);
+			setCurrentState("game");
+		} catch (error) {
+			Debug.getInstance().error(`Failed to load game: ${error}`);
+			setCurrentState("select");
+		}
 	};
 
 	const handleClear = async () => {
@@ -204,7 +224,9 @@ export default function Menu() {
 
 			{currentState() === "game" && (
 				<div id="game" class="flex flex-col h-[90vh] w-[90vw] max-w-[1200px]">
-					<Game engine={engine} />
+					<Show when={engine()}>
+						<Game engine={engine()!} />
+					</Show>
 				</div>
 			)}
 		</div>
