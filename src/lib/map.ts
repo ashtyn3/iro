@@ -1,9 +1,8 @@
-import type { Engine } from "./index";
-import { Vec2d } from "./state";
-import { createNoise2D } from "simplex-noise";
-import { DB } from "./state";
-import { GPURenderer } from "./gpu";
 import type { ConvexClient } from "convex/browser";
+import { createNoise2D } from "simplex-noise";
+import { GPURenderer } from "./gpu";
+import type { Engine } from "./index";
+import { DB, Vec2d } from "./state";
 
 export const COLORS = {
 	grass: {
@@ -48,7 +47,7 @@ export const COLORS = {
 	},
 };
 
-export const enum TileKinds {
+export enum TileKinds {
 	grass,
 	water,
 	rock,
@@ -200,7 +199,7 @@ export class GMap {
 		}
 	}
 	async flushWriteQueue() {
-		console.log("flushing write queue", this.writeQueue.length);
+		this.engine.debug.info(`flushing write queue ${this.writeQueue.length}`);
 		if (this.writeQueue.length > 0) {
 			const db = new DB(this.convex);
 			await db.updateViewportTiles(
@@ -238,10 +237,10 @@ export class GMap {
 				this.map[x][y] = elevation;
 			}
 		}
-		console.log("finish elevation map");
+		this.engine.debug.info("finish elevation map");
 
 		this.cellularSmooth(8);
-		console.log("finish smooth map");
+		this.engine.debug.info("finish smooth map");
 
 		this.tiles = new Array(this.width);
 		for (let x = 0; x < this.width; x++) {
@@ -301,14 +300,14 @@ export class GMap {
 				this.tiles[x].push(tile);
 			}
 		}
-		console.log("finish map assignments");
+		this.engine.debug.info("finish map assignments");
 		await this.buildClusters();
-		console.log("finish clusters");
+		this.engine.debug.info("finish clusters");
 		return true;
 	}
 
 	public async loadMap(id: string): Promise<boolean> {
-		let db = new DB(this.convex);
+		const db = new DB(this.convex);
 		this.tiles = await db.loadTiles(id);
 		this.computedClusters = await db.loadClusters(id);
 		this.buildClusterIndex();
@@ -318,8 +317,8 @@ export class GMap {
 
 	async buildClusters() {
 		this.computedClusters = await this.findClusters();
-		console.log("done workers");
-		let db = new DB(this.convex);
+		this.engine.debug.info("done workers");
+		const db = new DB(this.convex);
 		this.mapId = await db.saveTileHeader(this.width, this.height);
 		this.buildClusterIndex();
 		this.engine.scheduler.add(
@@ -329,7 +328,7 @@ export class GMap {
 					await db.saveClusters(this.mapId, this.computedClusters);
 					this.saved = true;
 					await this.flushWriteQueue();
-					console.log("saved");
+					this.engine.debug.info("saved");
 				},
 			},
 			false,
@@ -399,7 +398,7 @@ export class GMap {
 				);
 			}
 		} catch (error) {
-			console.error("GPU render failed:", error);
+			this.engine.debug.error(`GPU render failed: ${error}`);
 			this.renderCPU(); // Fallback to CPU rendering
 		}
 	}
@@ -523,7 +522,7 @@ export class GMap {
 		}
 
 		try {
-			console.log("awaiting workers");
+			this.engine.debug.info("awaiting workers");
 			const chunkResults = await Promise.all(workerPromises);
 
 			// Merge results from all workers
@@ -568,9 +567,8 @@ export class GMap {
 
 			return clusters;
 		} catch (error) {
-			console.warn(
-				"Worker clustering failed, falling back to synchronous:",
-				error,
+			this.engine.debug.warn(
+				`Worker clustering failed, falling back to synchronous: ${error}`,
 			);
 		}
 	}
@@ -587,7 +585,9 @@ export class GMap {
 
 		if (indexToRemove > -1) {
 			clusterArray.splice(indexToRemove, 1);
-			console.log(`Removed cluster of kind ${TileKinds[kind]} from memory.`);
+			this.engine.debug.info(
+				`Removed cluster of kind ${TileKinds[kind]} from memory.`,
+			);
 		}
 
 		// 2. Remove all points from the lookup index
@@ -599,7 +599,9 @@ export class GMap {
 		// 3. Save the updated clusters object to the database
 		const db = new DB(this.convex);
 		await db.updateClusters(this.mapId, this.computedClusters);
-		console.log(`Updated clusters in database for mapId: ${this.mapId}`);
+		this.engine.debug.info(
+			`Updated clusters in database for mapId: ${this.mapId}`,
+		);
 	}
 
 	private processChunkWithWorker(

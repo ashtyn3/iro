@@ -1,19 +1,19 @@
+import { useAuth, useSession } from "clerk-solidjs";
 import {
-	useContext,
+	createEffect,
 	createSignal,
 	For,
-	Show,
 	onMount,
-	createEffect,
+	Show,
+	useContext,
 } from "solid-js";
-import { ConvexContext } from "~/convex";
-import { createQuery } from "~/convex";
-import { api } from "../../convex/_generated/api";
+import { ConvexContext, createQuery } from "~/convex";
+import { Engine } from "~/lib";
+import { Debug } from "~/lib/debug";
 import { DB } from "~/lib/state";
+import { api } from "../../convex/_generated/api";
 import Game from "./game";
 import MainMenu from "./main-menu";
-import { useAuth, useSession } from "clerk-solidjs";
-import { Engine } from "~/lib";
 
 export default function Menu() {
 	const convex = useContext(ConvexContext);
@@ -34,7 +34,7 @@ export default function Menu() {
 			const token = await session.session()?.getToken({ template: "convex" });
 			return token || null;
 		} catch (error) {
-			console.error("Error fetching token:", error);
+			Debug.getInstance().error(`Error fetching token: ${error}`);
 			return null;
 		}
 	};
@@ -43,7 +43,7 @@ export default function Menu() {
 	onMount(() => {
 		if (convex) {
 			convex.setAuth(fetchToken, (auth) => {
-				console.log("auth", auth);
+				Debug.getInstance().info(`auth: ${auth}`);
 				setConvexAuth(auth);
 			});
 		}
@@ -79,7 +79,7 @@ export default function Menu() {
 	const handleLoadGame = async (tileSetId: string) => {
 		if (!tileSetId) return;
 		setCurrentState("loading");
-		console.log(tileSetId);
+		Debug.getInstance().info(`Loading tileSetId: ${tileSetId}`);
 		engine.mapBuilder.mapId = tileSetId;
 		await engine.mapBuilder.loadMap(tileSetId);
 		setCurrentState("game");
@@ -93,7 +93,7 @@ export default function Menu() {
 			await db.clear();
 			setCurrentState("select");
 		} catch (error) {
-			console.error("Failed to clear database:", error);
+			Debug.getInstance().error(`Failed to clear database: ${error}`);
 			setCurrentState("select");
 		}
 	};
@@ -106,7 +106,7 @@ export default function Menu() {
 			// TODO: Implement export functionality
 			setCurrentState("select");
 		} catch (error) {
-			console.error("Failed to export database:", error);
+			Debug.getInstance().error(`Failed to export database: ${error}`);
 			setCurrentState("select");
 		}
 	};
@@ -125,14 +125,14 @@ export default function Menu() {
 		if (files && files.length > 0) {
 			const file = files[0];
 			try {
-				console.log("Attempting to import file:", file.name);
+				Debug.getInstance().info(`Attempting to import file: ${file.name}`);
 				setCurrentState("loading");
 				const db = new DB(convex);
 				await db.importAll(file);
 				setCurrentState("select");
-				console.log("Import process finished.");
+				Debug.getInstance().info("Import process finished.");
 			} catch (error) {
-				console.error("Failed to import database:", error);
+				Debug.getInstance().error(`Failed to import database: ${error}`);
 				setCurrentState("select");
 				alert("Import failed: " + (error as Error).message);
 			}

@@ -3,6 +3,7 @@ import * as immutable from "immutable";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
 import { Clock } from "./clock";
+import { Debug } from "./debug";
 import { createMenuHolder, type MenuHolder } from "./inventory";
 import { KeyHandles } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
@@ -25,11 +26,15 @@ export class Engine {
 	convex: ConvexClient;
 	menuHolder: MenuHolder;
 	clockSystem: Clock;
+	debug: Debug;
 
 	constructor(w: number, h: number, convex: ConvexClient) {
 		this.width = w;
 		this.height = h;
 		this.convex = convex;
+
+		// Initialize debug system
+		this.debug = Debug.getInstance(this, { logLevel: "prod" });
 
 		const TILES_X = VIEWPORT.x;
 		const TILES_Y = VIEWPORT.y;
@@ -44,7 +49,7 @@ export class Engine {
 		});
 
 		this.mapBuilder = new GMap(this.width, this.height, this, this.convex, "");
-		if (navigator.gpu) {
+		if ((navigator as any).gpu) {
 			this.mapBuilder.useGPU = true;
 		}
 		this.scheduler = new SimpleScheduler();
@@ -114,7 +119,7 @@ export class Engine {
 
 		document.getElementById("gamebox")?.appendChild(canvas);
 		await this.render();
-		console.log(this.mapBuilder.useGPU ? "using GPU" : "using CPU");
+		this.debug.info(this.mapBuilder.useGPU ? "using GPU" : "using CPU");
 	}
 	viewport(): Vec2d {
 		const halfX = Math.floor(VIEWPORT.x / 2),

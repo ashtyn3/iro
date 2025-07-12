@@ -1,9 +1,10 @@
 import { For, onMount } from "solid-js";
+import { effect } from "solid-js/web";
 import type { Engine } from "~/lib";
+import { Debug } from "~/lib/debug";
 import type { Item, MenuHolder } from "~/lib/inventory";
 import type { PlayerType } from "~/lib/player";
 import InventoryViewer from "./inventoryView";
-import { effect } from "solid-js/web";
 
 export function Inventory({ engine }: { engine: Engine }) {
 	const itemArray = (): { count: number; item: Item }[] =>
@@ -38,9 +39,6 @@ export default function Game({ engine }: { engine: Engine }) {
 		const player: () => PlayerType = () => engine.player.value() as PlayerType;
 		const menu = () => engine.menuHolder.value() as MenuHolder;
 
-		effect(() => {
-			console.log(menu());
-		});
 		return (
 			<div class="w-full h-full bg-black">
 				{menu().Menu()}
@@ -68,7 +66,7 @@ export default function Game({ engine }: { engine: Engine }) {
 			</div>
 		);
 	} catch (error) {
-		console.error("Error creating Engine:", error);
+		Debug.getInstance().error(`Error creating Engine: ${error}`);
 		return (
 			<div class="w-full h-full bg-red-500">
 				<p>Error: {(error as Error).message}</p>

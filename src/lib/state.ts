@@ -1,6 +1,7 @@
 import type { ConvexClient } from "convex/browser";
 import * as immutable from "immutable";
 import { api } from "../../convex/_generated/api";
+import { Debug } from "./debug";
 import type { Cluster, Clusters, Tile } from "./map";
 import type { Entity, Movable } from "./traits";
 
@@ -92,11 +93,9 @@ export class DB {
 
 	constructor(private client: ConvexClient) {
 		if (DB._instance) {
-			console.trace("DB instance already exists");
 			return;
 		}
 		DB._instance = this;
-		console.trace("DB instance created");
 	}
 
 	async saveTileHeader(width: number, height: number) {
@@ -106,7 +105,7 @@ export class DB {
 		});
 	}
 	async saveTiles(tileSetId: string, tiles: Tile[][]): Promise<string> {
-		console.log("saving");
+		Debug.getInstance().info("saving");
 		// const tileSetId = await this.client.mutation(api.functions.saveTileSet.createTileSet, {
 		//     width: tiles.length,
 		//     height: tiles[0].length
@@ -129,7 +128,7 @@ export class DB {
 			!file ||
 			(file.type !== "application/gzip" && !file.name.endsWith(".gz"))
 		) {
-			console.error("Invalid file type. Please select a .gz file.");
+			Debug.getInstance().error("Invalid file type. Please select a .gz file.");
 			throw new Error("Invalid file type");
 		}
 
@@ -152,15 +151,15 @@ export class DB {
 					this.saveClusters(clusterData);
 				}
 
-				console.log("Database imported successfully!");
+				Debug.getInstance().info("Database imported successfully!");
 			} else {
-				console.error(
+				Debug.getInstance().error(
 					'Imported JSON is missing expected "tile_sets" or "clusters" properties.',
 				);
 				throw new Error("Invalid imported data structure");
 			}
 		} catch (error) {
-			console.error("Error importing database:", error);
+			Debug.getInstance().error(`Error importing database: ${error}`);
 			throw error; // Re-throw to handle higher up
 		}
 	}

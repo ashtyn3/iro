@@ -1,7 +1,7 @@
 import type { Tile } from "$lib/map";
-import { internalMutation, mutation } from "../_generated/server";
-import { api, internal } from "../_generated/api";
 import { v } from "convex/values";
+import { api, internal } from "../_generated/api";
+import { internalMutation, mutation } from "../_generated/server";
 
 // 1) Create just the tileset record
 export const createTileSet = mutation(
@@ -223,6 +223,7 @@ export const clearUserDataBatch = internalMutation({
 			.query("tileSets")
 			.withIndex("byOwner", (q) => q.eq("owner", userId))
 			.paginate({ cursor: cursor ?? null, numItems: 10 });
+		// Note: Convex functions run on server side, using console for logging
 		console.log("clearing user data batch", batch.page.length);
 
 		for (const tileSet of batch.page) {
@@ -302,6 +303,7 @@ export const clearUserData = mutation({
 			.query("users")
 			.withIndex("byExternalId", (q) => q.eq("externalId", me.subject))
 			.unique();
+		// Note: Convex functions run on server side, using console for logging
 		console.log("clearing user data", id);
 		if (!id) throw new Error("User record missing");
 
