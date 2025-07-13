@@ -71,7 +71,11 @@ export class Engine {
 		}
 		this.scheduler = new SimpleScheduler();
 		this.clockSystem = new Clock(this);
-		this.player = Player(this, "@", "right");
+		this.player = Player(
+			this,
+			"@",
+			(localStorage.getItem("handed") as "left" | "right") ?? "right",
+		);
 
 		this.engine = new ROT.Engine(this.scheduler);
 		this.state = {

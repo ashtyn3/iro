@@ -23,6 +23,13 @@ export default function MainMenu({
 			>
 				&gt; LOAD &lt;
 			</button>
+			<button
+				type="button"
+				onClick={() => setCurrentState("settings")}
+				class="bg-transparent border-2 border-white text-white text-base font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
+			>
+				&gt; SETTINGS &lt;
+			</button>
 		</div>
 	);
 }

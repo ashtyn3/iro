@@ -21,7 +21,9 @@ export default defineSchema({
 
 	settings: defineTable({
 		keyMap: v.any(),
-	}),
+		handed: v.union(v.literal("left"), v.literal("right")),
+		owner: v.id("users"),
+	}).index("byOwner", ["owner"]),
 	tileBlocks: defineTable({
 		tileSetId: v.id("tileSets"),
 		blockX: v.number(),

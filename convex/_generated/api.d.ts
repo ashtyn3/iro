@@ -17,6 +17,7 @@ import type * as functions_clusters from "../functions/clusters.js";
 import type * as functions_entityStates from "../functions/entityStates.js";
 import type * as functions_getTileSet from "../functions/getTileSet.js";
 import type * as functions_saveTileSet from "../functions/saveTileSet.js";
+import type * as functions_settings from "../functions/settings.js";
 import type * as http from "../http.js";
 import type * as users from "../users.js";
 
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   "functions/entityStates": typeof functions_entityStates;
   "functions/getTileSet": typeof functions_getTileSet;
   "functions/saveTileSet": typeof functions_saveTileSet;
+  "functions/settings": typeof functions_settings;
   http: typeof http;
   users: typeof users;
 }>;

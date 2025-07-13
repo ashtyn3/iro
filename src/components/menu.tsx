@@ -14,6 +14,7 @@ import { DB } from "~/lib/state";
 import { api } from "../../convex/_generated/api";
 import Game from "./game";
 import MainMenu from "./main-menu";
+import Settings from "./Settings";
 
 export const GIT_SHA =
 	import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
@@ -23,7 +24,7 @@ export default function Menu() {
 	const [convexAuth, setConvexAuth] = createSignal<boolean>(false);
 	const session = useSession();
 	const [currentState, setCurrentState] = createSignal<
-		"Menu" | "select" | "loading" | "game"
+		"Menu" | "select" | "loading" | "game" | "settings"
 	>("Menu");
 	const [importFileInput, setImportFileInput] =
 		createSignal<HTMLInputElement | null>(null);
@@ -177,6 +178,13 @@ export default function Menu() {
 
 			{currentState() === "select" && (
 				<div>
+					<button
+						type="button"
+						onClick={() => setCurrentState("Menu")}
+						class="mb-4 bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
+					>
+						&lt; BACK
+					</button>
 					<div id="selector" class="flex flex-col-reverse gap-2.5">
 						<Show when={tileSets()}>
 							<For
@@ -228,6 +236,19 @@ export default function Menu() {
 			)}
 
 			{currentState() === "loading" && <p>WAIT</p>}
+
+			{currentState() === "settings" && (
+				<div>
+					<button
+						type="button"
+						onClick={() => setCurrentState("Menu")}
+						class="bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
+					>
+						&lt; BACK
+					</button>
+					<Settings />
+				</div>
+			)}
 
 			{currentState() === "game" && (
 				<div id="game" class="flex flex-col h-[90vh] w-[90vw] max-w-[1200px]">

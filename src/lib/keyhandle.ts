@@ -1,4 +1,5 @@
 import InventoryViewer from "~/components/inventoryView";
+import { defaultKeys } from "~/default_keys";
 import type { Act } from "./action";
 import { EntityRegistry } from "./entity";
 import type { Engine } from "./index";
@@ -32,30 +33,36 @@ const moveLeftAction: Act = {
 	},
 };
 
-// --- Key Handles Definition ---
+export const keyMap = (): { [key: string]: { key: string; desc: string } } => {
+	const keys = localStorage.getItem("keys");
+	if (keys) {
+		return JSON.parse(keys);
+	}
+	return defaultKeys;
+};
 
 export const KeyHandles: { [key: string]: Act } = {
 	// Movement Keys
-	w: moveUpAction,
+	[keyMap().up.key]: moveUpAction,
 	ArrowUp: moveUpAction,
 
-	s: moveDownAction,
+	[keyMap().down.key]: moveDownAction,
 	ArrowDown: moveDownAction,
 
-	d: moveRightAction,
+	[keyMap().right.key]: moveRightAction,
 	ArrowRight: moveRightAction,
 
-	a: moveLeftAction,
+	[keyMap().left.key]: moveLeftAction,
 	ArrowLeft: moveLeftAction,
 
 	// Interaction Keys
-	f: {
+	[keyMap().interact.key]: {
 		perform: async (e: Engine, actor: Movable): Promise<void> => {
 			const a = actor as Movable & Inventory;
 			Items[await a.hands[a.dominant].name].perform(e, actor);
 		},
 	},
-	i: {
+	[keyMap().inventory.key]: {
 		perform: async (e: Engine): Promise<void> => {
 			if (e.menuHolder.displayed) {
 				e.menuHolder.menuOff();
@@ -64,7 +71,7 @@ export const KeyHandles: { [key: string]: Act } = {
 			}
 		},
 	},
-	r: {
+	[keyMap().handSwap.key]: {
 		perform: async (e: Engine, actor: Movable): Promise<void> => {
 			const a = actor as PlayerType;
 			a.handSwap();
