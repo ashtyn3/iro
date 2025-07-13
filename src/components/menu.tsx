@@ -44,7 +44,6 @@ export default function Menu() {
 	onMount(() => {
 		if (convex) {
 			convex.setAuth(fetchToken, (auth) => {
-				Debug.getInstance().info(`auth: ${auth}`);
 				setConvexAuth(auth);
 			});
 		}
