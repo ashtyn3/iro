@@ -27,16 +27,22 @@ const timingChain = (e: Engine) =>
 			e.mapBuilder.VIEW_RADIUS = 0;
 		}
 	})
-		.and("AirReduce", secondsToFrames(2), () => {
+		.and("AirReduce", secondsToFrames(4), () => {
 			if (e.player.air !== 0) {
 				e.player.air -= 10;
 				e.player.update({ air: e.player.air });
 			}
+		})
+		.and("HealthChanger", secondsToFrames(2), () => {
 			if (e.player.air === 0) {
 				e.player.damage(4);
 				if (e.player.dead) {
 					e.menuHolder.setMenu(() => DeathView({ engine: e }));
 				}
+			}
+			if (e.player.air > 60 && e.player.health <= 10) {
+				e.player.health += 1;
+				e.player.update({ health: e.player.health });
 			}
 		})
 		.and("AirFlicker1", 15, () => {
@@ -106,6 +112,6 @@ export interface Air extends Entity {
 
 export const Air: Component<Air, {}> = (base, init) => {
 	const e = base as Entity & Air;
-	e.air = 0;
+	e.air = 100;
 	return e;
 };
