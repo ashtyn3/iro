@@ -11,7 +11,7 @@ export const Destructible: Component<Destructible, number> = (
 	base,
 	initialHealth,
 ) => {
-	const e = base as Entity & Destructible;
+	const e = base as Entity & Destructible & Syncable;
 	// cast once to the widened type
 	// add your data & methods
 	e.health = initialHealth;
@@ -20,6 +20,9 @@ export const Destructible: Component<Destructible, number> = (
 		e.health -= amt;
 		if (e.health <= 0) {
 			e.dead = true;
+		}
+		if (e.update) {
+			e.update({ health: e.health, dead: e.dead });
 		}
 	};
 	return e;

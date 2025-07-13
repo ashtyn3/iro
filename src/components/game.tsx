@@ -1,4 +1,11 @@
-import { For, onMount } from "solid-js";
+import {
+	createComputed,
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onMount,
+} from "solid-js";
 import { effect } from "solid-js/web";
 import type { Engine } from "~/lib";
 import { Debug } from "~/lib/debug";
@@ -29,6 +36,21 @@ export function Inventory({ engine }: { engine: Engine }) {
 	);
 }
 
+export function HealthBar({ engine }: { engine: Engine }) {
+	const player: () => PlayerType = () => engine.player.value() as PlayerType;
+	const health = createMemo(() => Math.floor((player().health / 20) * 100));
+	return (
+		<div class="flex flex-row gap-2">
+			<p>
+				{health() < 50 ? (
+					<span class="text-red-500">{health()}%</span>
+				) : (
+					<span class="text-green-500">{health()}%</span>
+				)}
+			</p>
+		</div>
+	);
+}
 export default function Game({ engine }: { engine: Engine }) {
 	try {
 		onMount(async () => {
@@ -44,6 +66,7 @@ export default function Game({ engine }: { engine: Engine }) {
 				{menu().Menu()}
 				<div class="flex flex-row justify-between">
 					<p>{player().air}% Air</p>
+					<HealthBar engine={engine} />
 					<Inventory engine={engine} />
 				</div>
 				<div id="gamebox"></div>

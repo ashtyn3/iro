@@ -11,8 +11,8 @@ export default function DeathView({ engine }: { engine: Engine }) {
 		window.location.reload();
 	};
 	return (
-		<div class="flex flex-col items-center justify-center h-screen bg-black text-white">
-			<div class="text-center">
+		<div class="flex flex-col items-center justify-center h-screen bg-black text-white gap-4">
+			<div class="text-center flex flex-col items-center justify-center gap-4">
 				<h1 class="text-2xl font-bold">You are dead.</h1>
 				<p class="text-lg">Respawning isn't real. Sorry.</p>
 				<button
