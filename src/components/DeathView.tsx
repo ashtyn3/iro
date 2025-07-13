@@ -7,6 +7,7 @@ export default function DeathView({ engine }: { engine: Engine }) {
 		await engine.convex.mutation(api.functions.saveTileSet.death, {
 			tileSetId: engine.mapBuilder.mapId as Id<"tileSets">,
 		});
+		window.onbeforeunload = () => {};
 		window.location.reload();
 	};
 	return (
