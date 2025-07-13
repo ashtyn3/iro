@@ -19,6 +19,9 @@ export default defineSchema({
 		// optionally index by owner if you need to list all sets for a user:
 		.index("byOwner", ["owner"]),
 
+	settings: defineTable({
+		keyMap: v.any(),
+	}),
 	tileBlocks: defineTable({
 		tileSetId: v.id("tileSets"),
 		blockX: v.number(),

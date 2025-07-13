@@ -15,7 +15,8 @@ import { api } from "../../convex/_generated/api";
 import Game from "./game";
 import MainMenu from "./main-menu";
 
-export const GIT_SHA = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
+export const GIT_SHA =
+	import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
 
 export default function Menu() {
 	const convex = useContext(ConvexContext);
