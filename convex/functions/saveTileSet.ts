@@ -1,6 +1,7 @@
 import type { Tile } from "$lib/map";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 import { internalMutation, mutation, query } from "../_generated/server";
 
 export const canMakeMap = query(async ({ db, auth }) => {
@@ -23,6 +24,43 @@ export const canMakeMap = query(async ({ db, auth }) => {
 
 	return { state: true, message: "You can create a new map" };
 });
+
+export const death = mutation(
+	async (
+		{ db, auth, scheduler },
+		{ tileSetId }: { tileSetId: Id<"tileSets"> },
+	) => {
+		const user = await auth.getUserIdentity();
+		if (!user) throw new Error("Not signed in");
+		const u = await db
+			.query("users")
+			.withIndex("byExternalId", (q) => q.eq("externalId", user.subject))
+			.unique();
+		if (!u) throw new Error("User record missing");
+
+		await scheduler.runAfter(
+			0,
+			internal.functions.saveTileSet.clearTileBlocksBatch,
+			{ tileSetId, userId: u._id },
+		);
+		await scheduler.runAfter(
+			0,
+			internal.functions.saveTileSet.clearClustersBatch,
+			{ tileSetId, userId: u._id },
+		);
+		await scheduler.runAfter(
+			0,
+			internal.functions.saveTileSet.clearTileSetBatch,
+			{ tileSetId, userId: u._id },
+		);
+		await scheduler.runAfter(
+			0,
+			internal.functions.entityStates.clearEntityStates,
+			{ tileSetId },
+		);
+	},
+);
+
 // 1) Create just the tileset record
 export const createTileSet = mutation(
 	async (

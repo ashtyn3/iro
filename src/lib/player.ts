@@ -1,3 +1,4 @@
+import DeathView from "~/components/DeathView";
 import type { Component } from "./comps";
 import { createEntity, EntityBuilder, EntityRegistry } from "./entity";
 import type { Engine } from "./index";
@@ -6,6 +7,7 @@ import { Vec2d } from "./state";
 import { Syncable } from "./sync";
 import type { Entity } from "./traits";
 import {
+	Destructible,
 	Event,
 	Movable,
 	Named,
@@ -29,6 +31,12 @@ const timingChain = (e: Engine) =>
 			if (e.player.air !== 0) {
 				e.player.air -= 10;
 				e.player.update({ air: e.player.air });
+			}
+			if (e.player.air === 0) {
+				e.player.damage(4);
+				if (e.player.dead) {
+					e.menuHolder.setMenu(() => DeathView({ engine: e }));
+				}
 			}
 		})
 		.and("AirFlicker1", 15, () => {
@@ -61,7 +69,8 @@ const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {
 		.add(Storeable, "player")
 		.add(Renderable, () => {})
 		.add(Timed, timingChain(e))
-		.add(Named, { name: "player" });
+		.add(Named, { name: "player" })
+		.add(Destructible, 20);
 };
 
 export type PlayerType = Entity &
@@ -72,7 +81,8 @@ export type PlayerType = Entity &
 	Storeable &
 	Renderable &
 	Timed &
-	Named;
+	Named &
+	Destructible;
 
 export const Player = (
 	e: Engine,

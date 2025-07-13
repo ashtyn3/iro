@@ -4,6 +4,7 @@ import type { Entity, Existable } from "./types";
 export interface Destructible extends Entity {
 	health: number;
 	damage(amount: number): void;
+	dead: boolean;
 }
 
 export const Destructible: Component<Destructible, number> = (
@@ -14,8 +15,12 @@ export const Destructible: Component<Destructible, number> = (
 	// cast once to the widened type
 	// add your data & methods
 	e.health = initialHealth;
+	e.dead = false;
 	e.damage = (amt: number) => {
 		e.health -= amt;
+		if (e.health <= 0) {
+			e.dead = true;
+		}
 	};
 	return e;
 };
