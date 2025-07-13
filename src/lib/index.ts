@@ -8,6 +8,7 @@ import { EntityRegistry } from "./entity";
 import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
 import { KeyHandles } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
+import { Fire } from "./objects/fire";
 import { Player, type PlayerType } from "./player";
 import { type State, Vec2d } from "./state";
 import {
@@ -15,7 +16,9 @@ import {
 	type Movable,
 	Name,
 	Named,
+	Renderable,
 	type Storeable,
+	Timed,
 } from "./traits";
 
 export class Engine {
@@ -122,6 +125,7 @@ export class Engine {
 
 		window.onbeforeunload = () => confirm("Confirm refresh");
 
+		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
 		const frame = async () => {
 			// timed.forEach((e) => {
 			// 	e.act();
@@ -149,6 +153,9 @@ export class Engine {
 
 	public async render() {
 		await this.mapBuilder.render();
+		EntityRegistry.instance.lookup([Renderable]).forEach((e) => {
+			e.render();
+		});
 		this.player?.render?.();
 	}
 }

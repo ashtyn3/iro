@@ -1,5 +1,6 @@
 export * from "./collectable";
 export * from "./destructible";
+export * from "./lightEmitter";
 export * from "./movable";
 export * from "./named";
 export * from "./renderable";

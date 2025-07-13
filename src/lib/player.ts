@@ -16,6 +16,7 @@ import {
 	secondsToFrames,
 	Timed,
 } from "./traits";
+import { Trap } from "./traits/object_props";
 
 const timingChain = (e: Engine) =>
 	Event("AirRadius", secondsToFrames(1), () => {
@@ -26,6 +27,16 @@ const timingChain = (e: Engine) =>
 		if (e.player.air === 0) {
 			e.mapBuilder.VIEW_RADIUS = 0;
 		}
+		EntityRegistry.instance.lookupAndQuery([Trap, Movable], (t) => {
+			if (t.position.equals(e.player.position)) {
+				console.log("Trap", t.kills);
+				if (!t.kills) {
+					e.player.damage(1);
+				} else {
+					e.player.damage(20);
+				}
+			}
+		});
 	})
 		.and("AirReduce", secondsToFrames(4), () => {
 			if (e.player.air !== 0) {
@@ -36,9 +47,6 @@ const timingChain = (e: Engine) =>
 		.and("HealthChanger", secondsToFrames(2), () => {
 			if (e.player.air === 0) {
 				e.player.damage(4);
-				if (e.player.dead) {
-					e.menuHolder.setMenu(() => DeathView({ engine: e }));
-				}
 			}
 			if (e.player.air > 60 && e.player.health <= 10) {
 				e.player.health += 1;

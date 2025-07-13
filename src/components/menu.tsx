@@ -15,6 +15,8 @@ import { api } from "../../convex/_generated/api";
 import Game from "./game";
 import MainMenu from "./main-menu";
 
+export const GIT_SHA = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
+
 export default function Menu() {
 	const convex = useContext(ConvexContext);
 	const [convexAuth, setConvexAuth] = createSignal<boolean>(false);
@@ -161,10 +163,15 @@ export default function Menu() {
 	return (
 		<div class="bg-black flex flex-row justify-center items-center h-screen m-0 font-mono text-white">
 			{currentState() === "Menu" && (
-				<MainMenu
-					handleNewGame={handleNewGame}
-					setCurrentState={setCurrentState}
-				/>
+				<>
+					<MainMenu
+						handleNewGame={handleNewGame}
+						setCurrentState={setCurrentState}
+					/>
+					<p class="text-white text-xs absolute bottom-0 right-0">
+						VERSION: {GIT_SHA}
+					</p>
+				</>
 			)}
 
 			{currentState() === "select" && (

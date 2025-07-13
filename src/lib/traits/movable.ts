@@ -1,3 +1,4 @@
+import { actionGeneric } from "convex/server";
 import type { Component } from "../comps";
 import { Vec2d } from "../state";
 import type { Entity, Existable } from "./types";
@@ -36,3 +37,11 @@ export const Movable: Component<Movable, Vec2d> = (base, init) => {
 
 	return e;
 };
+
+// Set the name property for the component function
+Object.defineProperty(Movable, "name", {
+	value: "Movable",
+	writable: false,
+	enumerable: false,
+	configurable: true,
+});

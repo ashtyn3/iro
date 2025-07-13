@@ -10,3 +10,11 @@ export const Renderable: Component<Renderable, () => void> = (base, render) => {
 	e.render = render;
 	return e;
 };
+
+// Set the name property for the component function
+Object.defineProperty(Renderable, "name", {
+	value: "Renderable",
+	writable: false,
+	enumerable: false,
+	configurable: true,
+});

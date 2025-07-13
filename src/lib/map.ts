@@ -1,9 +1,11 @@
 import type { ConvexClient } from "convex/browser";
 import { createNoise2D } from "simplex-noise";
 import { api } from "~/convex/_generated/api";
+import { EntityRegistry } from "./entity";
 import { GPURenderer } from "./gpu";
 import type { Engine } from "./index";
 import { DB, Vec2d } from "./state";
+import { LightEmitter, type LightSource, Movable } from "./traits";
 
 export const COLORS = {
 	grass: {
@@ -420,6 +422,9 @@ export class GMap {
 		const vp = this.engine.viewport();
 		this.engine.display.clear();
 
+		// Collect light sources
+		const lights = this.collectLightSources(vp);
+
 		for (let sx = 0; sx < VIEWPORT.x; sx++) {
 			for (let sy = 0; sy < VIEWPORT.y; sy++) {
 				const wx = vp.x + sx;
@@ -458,10 +463,110 @@ export class GMap {
 				} else {
 					fg = cols.superFar;
 				}
+
+				// Apply light contributions
+				fg = this.applyLightContributions(wx, wy, fg, lights);
+
 				const ch = tile.mask?.char ?? tile.char;
 				this.engine.display.draw(sx, sy, ch, fg, tile.bg);
 			}
 		}
+	}
+
+	private collectLightSources(viewport: Vec2d): LightSource[] {
+		const lightEmitters = EntityRegistry.instance.lookup([
+			LightEmitter,
+			Movable,
+		]);
+		const lights: LightSource[] = [];
+
+		for (const emitter of lightEmitters) {
+			const lightSource = emitter.getLightSource();
+			// Only include lights that might affect the viewport
+			const lightX = lightSource.x;
+			const lightY = lightSource.y;
+			const lightRadius = lightSource.radius;
+
+			const viewportRight = viewport.x + VIEWPORT.x;
+			const viewportBottom = viewport.y + VIEWPORT.y;
+
+			// Check if light could affect viewport area
+			if (
+				lightX + lightRadius >= viewport.x &&
+				lightX - lightRadius <= viewportRight &&
+				lightY + lightRadius >= viewport.y &&
+				lightY - lightRadius <= viewportBottom
+			) {
+				lights.push(lightSource);
+			}
+		}
+
+		return lights;
+	}
+
+	private hexToRgb(hex: string): [number, number, number] {
+		const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		return result
+			? [
+					parseInt(result[1], 16),
+					parseInt(result[2], 16),
+					parseInt(result[3], 16),
+				]
+			: [0, 0, 0];
+	}
+
+	private rgbToHex(r: number, g: number, b: number): string {
+		return (
+			"#" +
+			Math.round(r).toString(16).padStart(2, "0") +
+			Math.round(g).toString(16).padStart(2, "0") +
+			Math.round(b).toString(16).padStart(2, "0")
+		);
+	}
+
+	private interpolateColorRgb(
+		color1: [number, number, number],
+		color2: [number, number, number],
+		factor: number,
+	): [number, number, number] {
+		const clampedFactor = Math.max(0, Math.min(1, factor));
+		return [
+			color1[0] + (color2[0] - color1[0]) * clampedFactor,
+			color1[1] + (color2[1] - color1[1]) * clampedFactor,
+			color1[2] + (color2[2] - color1[2]) * clampedFactor,
+		];
+	}
+
+	private applyLightContributions(
+		worldX: number,
+		worldY: number,
+		baseColor: string,
+		lights: LightSource[],
+	): string {
+		let baseRgb = this.hexToRgb(baseColor);
+
+		// Process each light source
+		for (const light of lights) {
+			const lightDx = worldX - light.x;
+			const lightDy = worldY - light.y;
+			const lightDist = Math.sqrt(lightDx * lightDx + lightDy * lightDy);
+
+			// Only apply light if within radius
+			if (lightDist <= light.radius) {
+				const lightRgb = this.hexToRgb(light.color);
+				const lightFalloff = 1.0 - lightDist / light.radius;
+				const lightStrength = light.intensity * lightFalloff * lightFalloff; // Quadratic falloff
+
+				// Blend light color with base color
+				baseRgb = this.interpolateColorRgb(
+					baseRgb,
+					lightRgb,
+					lightStrength * 0.5,
+				);
+			}
+		}
+
+		return this.rgbToHex(baseRgb[0], baseRgb[1], baseRgb[2]);
 	}
 
 	// Fixed: Make render async or handle promise properly

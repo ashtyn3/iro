@@ -1,10 +1,12 @@
 import InventoryViewer from "~/components/inventoryView";
 import type { Act } from "./action";
+import { EntityRegistry } from "./entity";
 import type { Engine } from "./index";
 import { type Inventory, Items } from "./inventory";
 import type { PlayerType } from "./player";
 import { Vec2d } from "./state";
-import type { Entity, Movable } from "./traits";
+import { Entity, type Movable, Named } from "./traits";
+import { Trap } from "./traits/object_props";
 
 const moveUpAction: Act = {
 	perform: async (e: Engine, actor: Movable): Promise<void> => {

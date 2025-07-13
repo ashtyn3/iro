@@ -1,78 +1,62 @@
-import { createEntity, createEntity } from "./entity";
-import type { Engine } from "./index";
+import * as Immutable from "immutable";
+import type { Engine } from ".";
+import type { AddedOf, Component, UnionToIntersection } from "./comps";
+import { Debug } from "./debug";
+import { createEntity, EntityBuilder, EntityRegistry } from "./entity";
 import type { Vec2d } from "./state";
-import type { Entity, Movable } from "./traits";
-import { Movable as MovableTrait } from "./traits";
+import { Movable, Named } from "./traits";
+import type { Entity, Existable } from "./traits/types";
 
-export interface Gobject extends Entity, Movable {
-	parts: Array<Entity>;
+export interface GObject extends Existable {
+	size: Vec2d;
+	sprite: string[];
+	bg: string;
+	fg: string;
 }
 
-export function createGobject(
-	e: Engine,
-	name: string,
-	ps: Array<Entity>,
-	tl_pos: Vec2d,
-): Gobject {
-	const entity = createEntity(e, name);
-	const movable = Movable(entity, tl_pos);
-
-	const gobject = movable as Gobject;
-	gobject.parts = ps;
-
-	gobject.move = (delta: Vec2d): void => {
-		if (
-			e.mapBuilder.tiles[gobject.position.x + delta.x][
-				gobject.position.y + delta.y
-			].boundary
-		)
-			return;
-		gobject.parts.forEach((p) => {
-			if (p.move) p.move(delta);
-		});
-	};
-
-	return gobject;
+export interface Unique extends Existable {
+	id: string;
 }
 
-export function box(
+export const Unique: Component<Unique, {}> = (base) => {
+	const e = base as Entity & Unique;
+	e.id = crypto.randomUUID();
+	return e;
+};
+
+export function createGObject(
 	e: Engine,
+	kind: string,
 	size: Vec2d,
-	tl_pos: Vec2d,
-	border: { h: string; v: string },
-	fill: string | null,
+	origin: Vec2d,
+	sprite: string[],
 ) {
-	const parts: Entity[] = [];
+	const base: GObject = {
+		engine: e,
+		_components: Immutable.Set([Symbol.for("GObject")]),
+		size,
+		sprite,
+		fg: "",
+		bg: "",
+	};
+	const built = new EntityBuilder(base)
+		.add(Named, { name: kind })
+		.add(Movable, origin)
+		.add(Unique, {})
+		.build();
 
-	const x0 = tl_pos.x - 1; // left border
-	const x1 = tl_pos.x + size.x; // right border
-	const y0 = tl_pos.y - 1; // top border
-	const y1 = tl_pos.y + size.y; // bottom border
+	return built;
+}
 
-	// 1) Corners
-	parts.push(new Entity(e, { x: x0, y: y0 }, "┌"));
-	parts.push(new Entity(e, { x: x1, y: y0 }, "┐"));
-	parts.push(new Entity(e, { x: x0, y: y1 }, "└"));
-	parts.push(new Entity(e, { x: x1, y: y1 }, "┘"));
+export type GObjectBase = GObject & Named & Unique & Movable;
 
-	// 2) Top & bottom edges (interior width)
-	for (let dx = 0; dx < size.x; dx++) {
-		parts.push(new Entity(e, { x: tl_pos.x + dx, y: y0 }, border.h));
-		parts.push(new Entity(e, { x: tl_pos.x + dx, y: y1 }, border.h));
+export function extendGObject(base: GObjectBase) {
+	const entity = EntityRegistry.instance.lookupByName(base.name);
+	if (!entity) {
+		Debug.getInstance().error(`GObject ${base.name} not found`);
+		throw new Error(`GObject ${base.name} not found`);
 	}
+	EntityRegistry.instance.deleteAndQuery([Named], (e) => e.name === base.name);
 
-	// 3) Left & right edges (interior height)
-	for (let dy = 0; dy < size.y; dy++) {
-		parts.push(new Entity(e, { x: x0, y: tl_pos.y + dy }, border.v));
-		parts.push(new Entity(e, { x: x1, y: tl_pos.y + dy }, border.v));
-	}
-	if (fill !== null) {
-		for (let dy = 0; dy < size.y; dy++) {
-			for (let dx = 0; dx < size.x; dx++) {
-				parts.push(new Entity(e, { x: tl_pos.x + dx, y: tl_pos.y + dy }, fill));
-			}
-		}
-	}
-
-	return new Gobject(e, "box", parts, tl_pos);
+	return new EntityBuilder(entity as unknown as GObjectBase);
 }

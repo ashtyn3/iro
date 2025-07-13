@@ -34,11 +34,14 @@ export class EntityRegistry {
 		this.CtoE = this.CtoE.set(entity._components, entity);
 	}
 
-	lookup(components: immutable.Set<symbol>): Array<Entity> {
+	lookup<M extends Array<Component<any, any>>>(
+		components: M,
+	): Array<UnionToIntersection<AddedOf<M[number]>>> {
+		const s = immutable.Set(components.map((c) => Symbol.for(c.name)));
 		const matching = this.CtoE.filter((e) => {
-			return components.isSubset(e._components);
+			return s.isSubset(e._components);
 		}).valueSeq();
-		return matching.toArray();
+		return matching.toArray() as any;
 	}
 	singleLookup<M extends Array<Component<any, any>>>(
 		components: M,
@@ -51,9 +54,7 @@ export class EntityRegistry {
 		components: M,
 		query: (entity: UnionToIntersection<AddedOf<M[number]>>) => any,
 	): UnionToIntersection<AddedOf<M[number]>>[] {
-		const entities = this.lookup(
-			immutable.Set(components.map((c) => Symbol.for(c.name))),
-		);
+		const entities = this.lookup(components);
 		return entities.filter((e) => query(e as any)) as any;
 	}
 
@@ -89,11 +90,14 @@ export function createEntity(
 	};
 }
 
-export class EntityBuilder<M extends Array<Component<any, any>> = []> {
+export class EntityBuilder<
+	B extends Existable = Existable,
+	M extends Array<Component<any, any>> = [],
+> {
 	private entries: Array<[Component<any, any>, any]>;
 
 	constructor(
-		private base: Existable,
+		private base: B,
 		entries?: Array<[Component<any, any>, any]>,
 	) {
 		this.entries = entries ?? [];
@@ -102,16 +106,16 @@ export class EntityBuilder<M extends Array<Component<any, any>> = []> {
 	add<Mi extends Component<any, any>>(
 		fn: Mi,
 		params: ParamsOf<Mi>,
-	): EntityBuilder<[...M, Mi]> {
+	): EntityBuilder<B, [...M, Mi]> {
 		const nextEntries = [...this.entries, [fn, params]] as Array<
 			[Component<any, any>, any]
 		>;
 		this.entries = nextEntries;
 
-		return this as unknown as EntityBuilder<[...M, Mi]>;
+		return this as unknown as EntityBuilder<B, [...M, Mi]>;
 	}
 
-	build(): Existable & UnionToIntersection<AddedOf<M[number]>> {
+	build(): B & UnionToIntersection<AddedOf<M[number]>> {
 		const entity = applyMixins(this.base, ...this.entries) as any;
 		EntityRegistry.instance.register(entity);
 		return entity;

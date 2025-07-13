@@ -1,6 +1,8 @@
+import { EntityRegistry } from "./entity";
+import { COLORS, type Tile, TileKinds, VIEWPORT } from "./map";
 import shader from "./shaders.wgsl?raw";
-import type { Vec2d } from "./state";
-import { COLORS, TileKinds, VIEWPORT, type Tile } from "./map";
+import { Vec2d } from "./state";
+import { LightEmitter, type LightSource, Movable } from "./traits";
 
 export class GPURenderer {
 	private device!: GPUDevice;
@@ -28,16 +30,80 @@ export class GPURenderer {
 		this.initialized = true;
 	}
 
-	private hexToInt(hex: string | null): number {
+	private hexToInt(hex: string | null | undefined): number {
 		if (!hex) return 0;
 		return parseInt(hex.slice(1), 16);
+	}
+
+	private collectLightSources(viewport: Vec2d): LightSource[] {
+		const lightEmitters = EntityRegistry.instance.lookup([
+			LightEmitter,
+			Movable,
+		]);
+		const lights: LightSource[] = [];
+
+		for (const emitter of lightEmitters) {
+			const lightSource = emitter.getLightSource();
+			// Only include lights that might affect the viewport
+			const lightX = lightSource.x;
+			const lightY = lightSource.y;
+			const lightRadius = lightSource.radius;
+
+			const viewportRight = viewport.x + VIEWPORT.x;
+			const viewportBottom = viewport.y + VIEWPORT.y;
+
+			// Check if light could affect viewport area
+			if (
+				lightX + lightRadius >= viewport.x &&
+				lightX - lightRadius <= viewportRight &&
+				lightY + lightRadius >= viewport.y &&
+				lightY - lightRadius <= viewportBottom
+			) {
+				lights.push(lightSource);
+			}
+		}
+
+		return lights;
+	}
+
+	private createLightBuffer(lights: LightSource[]): GPUBuffer {
+		// Each light source: x, y, radius, color, intensity (5 floats, but color is u32)
+		const lightData = new Float32Array(lights.length * 5);
+
+		for (let i = 0; i < lights.length; i++) {
+			const light = lights[i];
+			const offset = i * 5;
+			lightData[offset] = light.x;
+			lightData[offset + 1] = light.y;
+			lightData[offset + 2] = light.radius;
+			// Color needs to be stored as u32 but we'll use a view to write it
+			lightData[offset + 4] = light.intensity;
+		}
+
+		// Create a uint32 view to write colors
+		const colorView = new Uint32Array(lightData.buffer);
+		for (let i = 0; i < lights.length; i++) {
+			const colorIndex = i * 5 + 3; // 3rd element in each light (after x, y, radius)
+			colorView[colorIndex] = this.hexToInt(lights[i].color);
+		}
+
+		const buffer = this.device.createBuffer({
+			size: Math.max(lightData.byteLength, 4), // Minimum size for empty buffer
+			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+		});
+
+		if (lights.length > 0) {
+			this.device.queue.writeBuffer(buffer, 0, lightData);
+		}
+
+		return buffer;
 	}
 
 	private createTileBuffer(tiles: Tile[][], viewport: Vec2d): GPUBuffer {
 		const data = new Uint32Array(VIEWPORT.x * VIEWPORT.y * 10);
 
 		let i = 0;
-		let kindCounts: Record<number, number> = {}; // Debug
+		const kindCounts: Record<number, number> = {}; // Debug
 
 		// Fixed: Correct loop order - sy first, then sx
 		for (let sy = 0; sy < VIEWPORT.y; sy++) {
@@ -125,12 +191,13 @@ export class GPURenderer {
 		viewportX: number;
 		viewportY: number;
 		viewRadius: number;
+		lightCount: number;
 	}): GPUBuffer {
 		const STEPS = 5;
 		const DITHER_RADIUS = 5;
 		const SUPER_FAR_RADIUS = 20;
 
-		const paramsData = new ArrayBuffer(40); // Increased size for new fields
+		const paramsData = new ArrayBuffer(44); // Increased size for light_count
 		const view = new DataView(paramsData);
 
 		view.setFloat32(0, params.playerX, true);
@@ -143,13 +210,14 @@ export class GPURenderer {
 		view.setFloat32(28, DITHER_RADIUS, true);
 		view.setFloat32(32, SUPER_FAR_RADIUS, true);
 		view.setUint32(36, STEPS, true);
+		view.setUint32(40, params.lightCount, true); // light_count
 
 		const buffer = this.device.createBuffer({
 			size: paramsData.byteLength,
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
 
-		this.device.queue.writeBuffer(buffer, 0, paramsData);
+		this.device.queue.writeBuffer(buffer, 0, new Uint8Array(paramsData));
 		return buffer;
 	}
 
@@ -165,15 +233,23 @@ export class GPURenderer {
 			await this.init();
 		}
 
+		// Convert viewport to Vec2d format
+		const viewportVec2d = Vec2d(viewport);
+
+		// Collect light sources
+		const lights = this.collectLightSources(viewportVec2d);
+
 		// Create buffers
-		const tileBuffer = this.createTileBuffer(tiles, viewport);
+		const tileBuffer = this.createTileBuffer(tiles, viewportVec2d);
 		const colorBuffer = this.createColorBuffer();
+		const lightBuffer = this.createLightBuffer(lights);
 		const paramsBuffer = this.createParamsBuffer({
 			playerX: playerPos.x,
 			playerY: playerPos.y,
 			viewportX: viewport.x,
 			viewportY: viewport.y,
 			viewRadius,
+			lightCount: lights.length,
 		});
 
 		const outputSize = VIEWPORT.x * VIEWPORT.y * 3 * 4;
@@ -194,6 +270,7 @@ export class GPURenderer {
 				{ binding: 1, resource: { buffer: colorBuffer } },
 				{ binding: 2, resource: { buffer: paramsBuffer } },
 				{ binding: 3, resource: { buffer: outputBuffer } },
+				{ binding: 4, resource: { buffer: lightBuffer } },
 			],
 		});
 
@@ -229,8 +306,6 @@ export class GPURenderer {
 			y: number;
 		}[] = [];
 
-		// Debug: log first few results
-
 		for (let i = 0; i < VIEWPORT.x * VIEWPORT.y; i++) {
 			const charCode = results[i * 3];
 			const char = charCode === 0 ? " " : String.fromCharCode(charCode);
@@ -249,6 +324,7 @@ export class GPURenderer {
 
 		tileBuffer.destroy();
 		colorBuffer.destroy();
+		lightBuffer.destroy();
 		paramsBuffer.destroy();
 		outputBuffer.destroy();
 		stagingBuffer.destroy();
