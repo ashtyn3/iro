@@ -1,4 +1,5 @@
 import type { Component } from "../comps";
+import { VIEWPORT } from "../map";
 import type { Entity, Existable } from "./types";
 
 export interface LightSource {
@@ -14,6 +15,7 @@ export interface LightEmitter extends Existable {
 	lightColor: string;
 	lightIntensity: number;
 	getLightSource: () => LightSource;
+	inViewportWR: () => boolean;
 }
 
 export const LightEmitter: Component<
@@ -39,6 +41,27 @@ export const LightEmitter: Component<
 			color: e.lightColor,
 			intensity: e.lightIntensity,
 		};
+	};
+	e.inViewportWR = () => {
+		const lightSource = e.getLightSource();
+		const viewport = e.engine.viewport();
+		const lightX = lightSource.x;
+		const lightY = lightSource.y;
+		const lightRadius = lightSource.radius;
+
+		const viewportRight = viewport.x + VIEWPORT.x;
+		const viewportBottom = viewport.y + VIEWPORT.y;
+
+		// Check if light could affect viewport area (including radius)
+		if (
+			lightX + lightRadius >= viewport.x &&
+			lightX - lightRadius <= viewportRight &&
+			lightY + lightRadius >= viewport.y &&
+			lightY - lightRadius <= viewportBottom
+		) {
+			return true;
+		}
+		return false;
 	};
 
 	return e;

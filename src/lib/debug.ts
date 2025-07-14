@@ -22,7 +22,7 @@ type DebugConfig = {
 
 export class Debug {
 	private static instance: Debug | null = null;
-	private logLevel: LogLevel = "info";
+	private logLevel: LogLevel = import.meta.env.DEV ? "debug" : "info";
 	private engine: Engine | null = null;
 	private sessionStart: Date = new Date();
 
@@ -39,17 +39,17 @@ export class Debug {
 		return Debug.instance;
 	}
 
-	log(message: any, level: LogLevel = "info") {
+	log(level: LogLevel = "info", ...args: any[]) {
 		if (logLevelSeries[level] >= logLevelSeries[this.logLevel]) {
 			if (level === "prod") {
-				console.info(`[${level}]`, message);
+				console.info(`[${level}]`, ...args);
 			} else {
-				console[level](`[${level}]`, message);
+				console[level](`[${level}]`, ...args);
 			}
 		}
 		if (import.meta.env.PROD && level !== "prod") {
 			axiom.ingest("iro", {
-				message,
+				message: args.join(" "),
 				level: level,
 				timestamp: new Date().toISOString(),
 				trace: new Error().stack,
@@ -61,22 +61,22 @@ export class Debug {
 		}
 	}
 
-	info(message: any) {
-		this.log(message, "info");
+	info(...messages: any[]) {
+		this.log("info", ...messages);
 	}
 
-	warn(message: any) {
-		this.log(message, "warn");
+	warn(...messages: any[]) {
+		this.log("warn", ...messages);
 	}
 
-	error(message: any) {
-		this.log(message, "error");
+	error(...messages: any[]) {
+		this.log("error", ...messages);
 	}
 
-	debug(message: any) {
-		this.log(message, "debug");
+	debug(...messages: any[]) {
+		this.log("debug", ...messages);
 	}
-	prod(message: any) {
-		this.log(message, "prod");
+	prod(...messages: any[]) {
+		this.log("prod", ...messages);
 	}
 }

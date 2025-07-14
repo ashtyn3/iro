@@ -3,6 +3,7 @@ import type { Engine } from ".";
 import type { AddedOf, Component, UnionToIntersection } from "./comps";
 import { Debug } from "./debug";
 import { createEntity, EntityBuilder, EntityRegistry } from "./entity";
+import { VIEWPORT } from "./map";
 import type { Vec2d } from "./state";
 import { Movable, Named } from "./traits";
 import type { Entity, Existable } from "./traits/types";
@@ -12,6 +13,7 @@ export interface GObject extends Existable {
 	sprite: string[];
 	bg: string;
 	fg: string;
+	inViewport: () => boolean;
 }
 
 export interface Unique extends Existable {
@@ -38,6 +40,15 @@ export function createGObject(
 		sprite,
 		fg: "",
 		bg: "",
+		inViewport: () => {
+			const vp = e.viewport();
+			return (
+				origin.x >= vp.x &&
+				origin.x <= vp.x + VIEWPORT.x &&
+				origin.y >= vp.y &&
+				origin.y <= vp.y + VIEWPORT.y
+			);
+		},
 	};
 	const built = new EntityBuilder(base)
 		.add(Named, { name: kind })

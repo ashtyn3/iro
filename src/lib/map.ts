@@ -490,13 +490,8 @@ export class GMap {
 			const viewportRight = viewport.x + VIEWPORT.x;
 			const viewportBottom = viewport.y + VIEWPORT.y;
 
-			// Check if light could affect viewport area
-			if (
-				lightX + lightRadius >= viewport.x &&
-				lightX - lightRadius <= viewportRight &&
-				lightY + lightRadius >= viewport.y &&
-				lightY - lightRadius <= viewportBottom
-			) {
+			// Check if light could affect viewport area (including radius)
+			if (emitter.inViewportWR()) {
 				lights.push(lightSource);
 			}
 		}

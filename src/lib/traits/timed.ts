@@ -18,7 +18,15 @@ export const Timed: Component<Timed, EventsBuilder> = (base, act) => {
 	const events = act.build();
 	events.forEach((event) => {
 		e.ownedEvents.add(event.id);
-		e.engine.clockSystem.addEvent(event.id, event.time, event.callback);
+		e.engine.clockSystem.addEvent(event.id, event.time, () => {
+			if (e["inViewport"] || e["inViewportWR"]) {
+				if (e["inViewport"]() || e["inViewportWR"]()) {
+					event.callback();
+				}
+			} else {
+				event.callback();
+			}
+		});
 	});
 
 	return e;

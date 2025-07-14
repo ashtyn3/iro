@@ -36,6 +36,9 @@ export const Fire = (e: Engine, pos: Vec2d) => {
 	ext.bg = "yellow";
 
 	ext.render = () => {
+		if (!ext.inViewportWR()) {
+			return;
+		}
 		const vp = e.viewport();
 		const px = ext.position.x - vp.x;
 		const py = ext.position.y - vp.y;

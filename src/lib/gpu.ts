@@ -1,8 +1,9 @@
+import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
 import { COLORS, type Tile, TileKinds, VIEWPORT } from "./map";
 import shader from "./shaders.wgsl?raw";
 import { Vec2d } from "./state";
-import { LightEmitter, type LightSource, Movable } from "./traits";
+import { LightEmitter, type LightSource, Movable, Named } from "./traits";
 
 export class GPURenderer {
 	private device!: GPUDevice;
@@ -39,6 +40,7 @@ export class GPURenderer {
 		const lightEmitters = EntityRegistry.instance.lookup([
 			LightEmitter,
 			Movable,
+			Named,
 		]);
 		const lights: LightSource[] = [];
 
@@ -52,15 +54,20 @@ export class GPURenderer {
 			const viewportRight = viewport.x + VIEWPORT.x;
 			const viewportBottom = viewport.y + VIEWPORT.y;
 
-			// Check if light could affect viewport area
-			if (
-				lightX + lightRadius >= viewport.x &&
-				lightX - lightRadius <= viewportRight &&
-				lightY + lightRadius >= viewport.y &&
-				lightY - lightRadius <= viewportBottom
-			) {
+			// Check if light could affect viewport area (including radius)
+			if (emitter.inViewportWR()) {
 				lights.push(lightSource);
 			}
+			// if (
+			// 	lightX + lightRadius >= viewport.x &&
+			// 	lightX - lightRadius <= viewportRight &&
+			// 	lightY + lightRadius >= viewport.y &&
+			// 	lightY - lightRadius <= viewportBottom
+			// ) {
+			// 	lights.push(lightSource);
+			// } else {
+			// 	Debug.getInstance().info(emitter.name, "not in viewport");
+			// }
 		}
 
 		return lights;
@@ -88,7 +95,7 @@ export class GPURenderer {
 		}
 
 		const buffer = this.device.createBuffer({
-			size: Math.max(lightData.byteLength, 4), // Minimum size for empty buffer
+			size: Math.max(lightData.byteLength, 20), // Minimum size for WebGPU binding
 			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 		});
 
