@@ -31,6 +31,9 @@ export default function Docs() {
 									<div>
 										<span class="text-green-500">^</span> - Tree leaves
 									</div>
+									<div>
+										<span class="text-red-500">o</span> - berry bush
+									</div>
 								</div>
 							</div>
 							<div>
