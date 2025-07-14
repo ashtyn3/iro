@@ -38,6 +38,7 @@ export const Destructible: Component<Destructible, number> = (
 		if (e.health > initialHealth) {
 			e.health = initialHealth;
 		}
+		console.log(e.health);
 		if (e.update) {
 			e.update({ health: e.health, dead: e.dead });
 		}

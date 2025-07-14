@@ -84,7 +84,7 @@ export const Items: { [key: string]: Item } = {
 				entity.damage(7.5);
 
 				if (entity.health <= 0) {
-					e.menuHolder.setMenu(() =>
+					e.messageMenu.setMenu(() =>
 						Msg({ engine: e, msg: "You have felled a tree" }),
 					);
 					const tileUpdates = [];
@@ -118,7 +118,9 @@ export const Items: { [key: string]: Item } = {
 					await e.mapBuilder.removeCluster(e.state.currentCluster!);
 				}
 			} else {
-				e.menuHolder.setMenu(() => Msg({ engine: e, msg: "Swung and missed" }));
+				e.messageMenu.setMenu(() =>
+					Msg({ engine: e, msg: "Swung and missed" }),
+				);
 			}
 		},
 	},
@@ -186,11 +188,11 @@ export const Items: { [key: string]: Item } = {
 					tile,
 				);
 				await e.mapBuilder.removeCluster(e.state.currentCluster!);
-				e.menuHolder.setMenu(() =>
+				e.messageMenu.setMenu(() =>
 					Msg({ engine: e, msg: `You have picked ${amt} berries` }),
 				);
 			} else {
-				e.menuHolder.setMenu(() =>
+				e.messageMenu.setMenu(() =>
 					Msg({ engine: e, msg: "Punching the air..." }),
 				);
 			}
@@ -213,7 +215,7 @@ export const Items: { [key: string]: Item } = {
 			actor: Movable & Destructible & Syncable & Inventory,
 		): Promise<void> => {
 			actor.heal(5);
-			e.menuHolder.setMenu(() => Msg({ engine: e, msg: "You ate a berry" }));
+			e.messageMenu.setMenu(() => Msg({ engine: e, msg: "You ate a berry" }));
 			actor.removeHand(actor.dominant);
 
 			if (actor.update) {

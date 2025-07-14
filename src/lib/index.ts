@@ -35,6 +35,7 @@ export class Engine {
 	cycles: number = 0;
 	convex: ConvexClient;
 	menuHolder: MenuHolder;
+	messageMenu: MenuHolder;
 	clockSystem: Clock;
 	debug: Debug;
 
@@ -82,6 +83,7 @@ export class Engine {
 			currentCluster: null,
 		};
 		this.menuHolder = createMenuHolder(this);
+		this.messageMenu = createMenuHolder(this);
 	}
 
 	async start() {

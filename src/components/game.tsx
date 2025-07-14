@@ -62,6 +62,7 @@ export default function Game({ engine }: { engine: Engine }) {
 
 		const player: () => PlayerType = () => engine.player.value() as PlayerType;
 		const menu = () => engine.menuHolder.value() as MenuHolder;
+		const messageMenu = () => engine.messageMenu.value() as MenuHolder;
 
 		return (
 			<div class="w-full h-full bg-black">
@@ -88,6 +89,7 @@ export default function Game({ engine }: { engine: Engine }) {
 						/>
 					</div>
 				</div>
+				{messageMenu().Menu()}
 			</div>
 		);
 	} catch (error) {

@@ -32,7 +32,9 @@ export const Fire = (e: Engine, pos: Vec2d) => {
 		.add(LightEmitter, { radius: 15, color: "#FF6B35", intensity: 0.8 })
 		.add(Trap, () => {
 			e.player.damage(1);
-			e.menuHolder.setMenu(() => Msg({ engine: e, msg: "You are burning..." }));
+			e.messageMenu.setMenu(() =>
+				Msg({ engine: e, msg: "You are burning..." }),
+			);
 		})
 		.build();
 

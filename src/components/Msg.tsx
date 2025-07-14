@@ -4,7 +4,7 @@ import type { Engine } from "../lib";
 export default function Msg({ engine, msg }: { engine: Engine; msg: string }) {
 	createEffect(() => {
 		setTimeout(() => {
-			engine.menuHolder.menuOff();
+			engine.messageMenu.menuOff();
 		}, 1000);
 	});
 	return (
