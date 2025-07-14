@@ -64,7 +64,7 @@ export const KeyHandles: { [key: string]: Act } = {
 	},
 	[keyMap().inventory.key]: {
 		perform: async (e: Engine): Promise<void> => {
-			if (e.menuHolder.displayed) {
+			if (e.menuHolder.displayed && e.menuHolder.Menu() !== null) {
 				e.menuHolder.menuOff();
 			} else {
 				e.menuHolder.setMenu(() => InventoryViewer({ engine: e }));

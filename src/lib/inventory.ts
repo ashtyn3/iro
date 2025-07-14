@@ -323,7 +323,6 @@ export const MenuHolder: Component<MenuHolder, { menu: () => JSX.Element }> = (
 	e.displayed = false;
 	e.Menu = init.menu;
 	e.setMenu = (menu: () => JSX.Element) => {
-		e.menuOff();
 		e.Menu = menu;
 		e.displayed = true;
 		e.update({ Menu: menu, displayed: true });
