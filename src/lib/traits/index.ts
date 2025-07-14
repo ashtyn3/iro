@@ -1,3 +1,5 @@
+import SuperJSON from "superjson";
+
 export * from "./collectable";
 export * from "./destructible";
 export * from "./lightEmitter";

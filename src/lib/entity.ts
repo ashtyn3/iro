@@ -1,6 +1,7 @@
 // entity.ts
 
 import * as immutable from "immutable";
+import SuperJSON from "superjson";
 import {
 	type AddedOf,
 	applyMixins,
@@ -9,10 +10,13 @@ import {
 	type UnionToIntersection,
 } from "./comps";
 import type { Engine } from "./index";
-import { Inventory } from "./inventory";
+import { Inventory, MenuHolder } from "./inventory";
 import { TileKinds } from "./map";
+import { Unique } from "./object";
 import { Berry } from "./objects/berry";
-import { Air } from "./player";
+import { Fire } from "./objects/fire";
+import { DarkThing } from "./objects/mobs/dark_thing";
+import { Air, Player } from "./player";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync";
 import {
@@ -25,7 +29,10 @@ import {
 	Storeable,
 	Timed,
 } from "./traits";
+import { LightEmitter } from "./traits/lightEmitter";
+import { Boundary, Trap } from "./traits/object_props";
 import { Pathed } from "./traits/pathed";
+import { Renderable } from "./traits/renderable";
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
 
@@ -126,6 +133,94 @@ export class EntityBuilder<
 	}
 }
 
+// Custom serializer for component sets that contain symbols
+SuperJSON.registerCustom(
+	{
+		serialize: (set: immutable.Set<symbol>) => {
+			// Convert symbols to their string keys for serialization
+			return set.toArray().map((sym) => {
+				const key = Symbol.keyFor(sym);
+				if (key !== undefined) return key;
+				// For symbols without keys, use the description or a fallback
+				return sym.description || `Symbol_${sym.toString().slice(7, -1)}`;
+			});
+		},
+		deserialize: (arr: string[]) => {
+			// Convert string keys back to symbols
+			return immutable.Set(
+				arr.map((key) => {
+					// Handle empty string keys by using a fallback
+					if (key === "") return Symbol.for("unnamed");
+					return Symbol.for(key);
+				}),
+			);
+		},
+		isApplicable: (v: any): v is immutable.Set<symbol> => {
+			if (!(v instanceof immutable.Set)) return false;
+			try {
+				const arr = (v as any).toArray();
+				return (
+					arr.length > 0 && arr.every((item: any) => typeof item === "symbol")
+				);
+			} catch {
+				return false;
+			}
+		},
+	},
+	"immutable.Set<symbol>",
+);
+
+// Keep the general immutable.Set serializer for other sets
+SuperJSON.registerCustom(
+	{
+		serialize: (set: immutable.Set<any>) => set.toArray(),
+		deserialize: (arr: any) => immutable.Set(arr),
+		isApplicable: (v: any): v is immutable.Set<unknown> => {
+			if (!(v instanceof immutable.Set)) return false;
+			try {
+				const arr = (v as any).toArray();
+				return (
+					arr.length === 0 ||
+					!arr.every((item: any) => typeof item === "symbol")
+				);
+			} catch {
+				return true; // If we can't check, assume it's a regular set
+			}
+		},
+	},
+	"immutable.Set",
+);
+
+// Custom serializer for Vec2d immutable records
+SuperJSON.registerCustom(
+	{
+		serialize: (vec2d: any) => {
+			// Convert Vec2d to plain object for serialization
+			return { x: vec2d.x, y: vec2d.y };
+		},
+		deserialize: (data: any) => {
+			// Convert plain object back to Vec2d
+			return Vec2d(data);
+		},
+		isApplicable: (v: any): v is any => {
+			// Check if this is a Vec2d (has x, y properties and is an immutable record)
+			// Use a more reliable check that works with minification
+			return (
+				v &&
+				typeof v === "object" &&
+				"x" in v &&
+				"y" in v &&
+				typeof v.x === "number" &&
+				typeof v.y === "number" &&
+				v.constructor &&
+				typeof v.constructor === "function" &&
+				typeof v.equals === "function"
+			);
+		},
+	},
+	"Vec2d",
+);
+
 export function promote(
 	e: Engine,
 	pos: Vec2d,
@@ -167,53 +262,163 @@ export function promote(
 	return entity;
 }
 
+// Component mapping for deserialization
+const COMPONENT_MAP: Record<
+	string,
+	{ component: any; getParams: (data: any) => any }
+> = {
+	Movable: {
+		component: Movable,
+		getParams: (data: any) =>
+			data.position ? Vec2d(data.position) : Vec2d({ x: 0, y: 0 }),
+	},
+	Destructible: {
+		component: Destructible,
+		getParams: (data: any) => ({
+			maxHealth: data.maxHealth || 15,
+			currentHealth: data.health || 15,
+		}),
+	},
+	Timed: {
+		component: Timed,
+		getParams: (data: any) => data.act,
+	},
+	Inventory: {
+		component: Inventory,
+		getParams: (data: any) => ({
+			slots: data.slots || 5,
+			dominant: data.dominant || "right",
+			Items: data.Items || [],
+			hands: data.hands || [],
+		}),
+	},
+	Air: {
+		component: Air,
+		getParams: () => ({}),
+	},
+	Syncable: {
+		component: Syncable,
+		getParams: (data: any) => data.id || "",
+	},
+	Named: {
+		component: Named,
+		getParams: (data: any) => ({ name: data.name }),
+	},
+	Pathed: {
+		component: Pathed,
+		getParams: (data: any) => data.seeking || "",
+	},
+	Storeable: {
+		component: Storeable,
+		getParams: (data: any) => data.id || "",
+	},
+	Collectable: {
+		component: Collectable,
+		getParams: () => ({}),
+	},
+	LightEmitter: {
+		component: LightEmitter,
+		getParams: (data: any) => ({
+			radius: data.lightRadius || 3,
+			intensity: data.lightIntensity || 1.0,
+		}),
+	},
+	Boundary: {
+		component: Boundary,
+		getParams: () => ({}),
+	},
+	Trap: {
+		component: Trap,
+		getParams: (data: any) => data.trapFunction || (() => {}),
+	},
+	Renderable: {
+		component: Renderable,
+		getParams: (data: any) => data.renderFunction || (() => {}),
+	},
+	Unique: {
+		component: Unique,
+		getParams: () => ({}),
+	},
+	MenuHolder: {
+		component: MenuHolder,
+		getParams: (data: any) => ({ menu: data.menuFunction || (() => null) }),
+	},
+};
+
 export function deserializeEntity(
 	engine: Engine,
 	data: any,
 	existingEntity?: Entity,
 ): Entity {
+	// For known entity types, try to find existing entity in registry
+	if (data.name === "player") {
+		const existingPlayer = EntityRegistry.instance.lookupByName("player");
+		if (existingPlayer) {
+			// Update existing player entity with new data
+			Object.assign(existingPlayer, data);
+			return existingPlayer;
+		} else {
+			// Create new player if none exists
+			return Player(engine, data.char || "@", data.dominant || "right");
+		}
+	} else if (data.name === "fire") {
+		const existingFire = EntityRegistry.instance.lookupByName("fire");
+		if (existingFire) {
+			// Update existing fire entity
+			Object.assign(existingFire, data);
+			return existingFire;
+		} else {
+			// Create new fire entity
+			return Fire(engine, data.position);
+		}
+	} else if (data.name === "dark_thing") {
+		const existingDarkThing =
+			EntityRegistry.instance.lookupByName("dark_thing");
+		if (existingDarkThing) {
+			// Update existing dark thing entity
+			Object.assign(existingDarkThing, data);
+			return existingDarkThing;
+		} else {
+			// Create new dark thing entity
+			return DarkThing(engine, data.position);
+		}
+	}
+
 	const entityToBuildOn =
 		existingEntity ?? createEntity(engine, data.char, data.fg, data.bg);
 	const builder = new EntityBuilder(entityToBuildOn);
 
-	if (data.position) {
-		builder.add(Movable, Vec2d(data.position));
-	}
-	if (data.health !== undefined) {
-		builder.add(Destructible, {
-			maxHealth: data.maxHealth,
-			currentHealth: data.health,
-		});
-	}
-	if (data.act !== undefined) {
-		builder.add(Timed, data.act);
-	}
-	if (data.Items !== undefined || data.slots !== undefined) {
-		builder.add(Inventory, {
-			slots: data.slots || 5,
-			dominant: data.dominant || "right",
-			Items: data.Items,
-			hands: data.hands,
-		});
-	}
-	if (data.air !== undefined) {
-		builder.add(Air, {});
-	}
+	data._components.forEach((component: any) => {
+		let componentName: string;
+		if (typeof component === "symbol") {
+			const key = Symbol.keyFor(component);
+			if (key !== undefined) {
+				componentName = key;
+			} else {
+				componentName =
+					component.description ||
+					`Symbol_${component.toString().slice(7, -1)}`;
+			}
+		} else {
+			componentName = component;
+		}
 
-	if (data.syncable && !(existingEntity as any)?.syncable) {
-		builder.add(Syncable, data.id);
-	}
-	if (data.name) {
-		builder.add(Named, { name: data.name });
-	}
-
-	if (data.seeking) {
-		builder.add(Pathed, data.seeking);
-	}
-
-	if (data.id) {
-		builder.add(Storeable, data.id);
-	}
+		const componentInfo = COMPONENT_MAP[componentName];
+		if (componentInfo) {
+			const params = componentInfo.getParams(data);
+			if (params !== undefined) {
+				builder.add(componentInfo.component, params);
+			}
+		} else {
+			if (data.name === componentName) {
+				builder.add(Named, { name: data.name });
+			} else {
+				console.warn(
+					`Unknown component during deserialization: ${componentName}`,
+				);
+			}
+		}
+	});
 
 	const builtEntity = builder.build() as Entity;
 

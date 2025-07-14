@@ -1,3 +1,5 @@
+import immutable from "immutable";
+import SuperJSON from "superjson";
 import DeathView from "~/components/DeathView";
 import type { Component } from "../comps";
 import type { Syncable } from "../sync";
