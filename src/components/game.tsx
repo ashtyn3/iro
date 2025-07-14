@@ -46,7 +46,8 @@ export function HealthBar({ engine }: { engine: Engine }) {
 					<span class="text-red-500">{health()}%</span>
 				) : (
 					<span class="text-green-500">{health()}%</span>
-				)}
+				)}{" "}
+				Health
 			</p>
 		</div>
 	);
