@@ -116,6 +116,8 @@ export const Items: { [key: string]: Item } = {
 					}
 					await e.mapBuilder.removeCluster(e.state.currentCluster!);
 				}
+			} else {
+				e.menuHolder.setMenu(() => Msg({ engine: e, msg: "Swung and missed" }));
 			}
 		},
 	},
@@ -162,6 +164,10 @@ export const Items: { [key: string]: Item } = {
 					}
 					await e.mapBuilder.removeCluster(e.state.currentCluster!);
 				}
+			} else {
+				e.menuHolder.setMenu(() =>
+					Msg({ engine: e, msg: "Punching the air..." }),
+				);
 			}
 		},
 	},
