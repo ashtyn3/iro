@@ -10,46 +10,45 @@ import { LightEmitter, type LightSource, Movable } from "./traits";
 export const COLORS = {
 	grass: {
 		close: "#5C8A34",
-		far: "#2E552B",
-		superFar: "#1A291A",
+		far: "#0F1A0B",
+		superFar: "#050805",
 	},
 	water: {
 		close: "#3A6EA5",
-		far: "#2A4E75",
-		superFar: "#172C48",
+		far: "#0A111B",
+		superFar: "#05080D",
 	},
 	rock: {
 		close: "#7D7D7D",
-		far: "#4D4D4D",
-		superFar: "#2F2F2F",
+		far: "#111111",
+		superFar: "#050505",
 	},
 	copper: {
 		close: "#8C5A2B",
-		far: "#5F3F19",
-		superFar: "#3C270F",
+		far: "#120B05",
+		superFar: "#070402",
 	},
 	wood: {
 		close: "#A67C52",
-		far: "#7A5634",
-		superFar: "#4F331E",
+		far: "#1A1008",
+		superFar: "#080503",
 	},
 	leafs: {
 		close: "#4F7C45",
-		far: "#1D371A",
-		superFar: "#0F1E0F",
+		far: "#0A0F08",
+		superFar: "#030503",
 	},
 	struct: {
 		close: "#7D7D7D",
-		far: "#4D4D4D",
-		superFar: "#2F2F2F",
+		far: "#111111",
+		superFar: "#050505",
 	},
 	tree: {
 		close: "#4F7C45",
-		far: "#1D371A",
-		superFar: "#0F1E0F",
+		far: "#0A0F08",
+		superFar: "#030503",
 	},
 };
-
 export enum TileKinds {
 	grass,
 	water,

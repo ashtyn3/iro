@@ -22,6 +22,7 @@ const timingChain = (e: Engine) =>
 	Event("AirRadius", secondsToFrames(1), () => {
 		if (e.player.air !== 0) {
 			e.mapBuilder.VIEW_RADIUS = Math.floor((e.player.air / 100) * 10);
+			console.log("AirRadius", e.mapBuilder.VIEW_RADIUS);
 		}
 
 		if (e.player.air === 0) {
@@ -55,12 +56,12 @@ const timingChain = (e: Engine) =>
 		})
 		.and("AirFlicker1", 15, () => {
 			if (e.player.air === 0) {
-				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS ^ 1;
+				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS === 1 ? 0 : 1;
 			}
 		})
 		.and("AirFlicker2", 20, () => {
 			if (e.player.air === 0) {
-				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS ^ 2;
+				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS === 1 ? 0 : 1;
 			}
 		});
 const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {

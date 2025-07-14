@@ -201,7 +201,7 @@ export class GPURenderer {
 		lightCount: number;
 	}): GPUBuffer {
 		const STEPS = 5;
-		const DITHER_RADIUS = 5;
+		const DITHER_RADIUS = 10;
 		const SUPER_FAR_RADIUS = 20;
 
 		const paramsData = new ArrayBuffer(44); // Increased size for light_count
