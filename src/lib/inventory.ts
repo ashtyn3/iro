@@ -42,6 +42,7 @@ export const getUnderneath = (e: Engine, pos: Vec2d) => {
 	}
 	return entity;
 };
+
 export const Items: { [key: string]: Item } = {
 	empty: {
 		name: "none",
@@ -164,6 +165,30 @@ export const Items: { [key: string]: Item } = {
 					}
 					await e.mapBuilder.removeCluster(e.state.currentCluster!);
 				}
+			} else if (e.state.currentCluster?.kind === TileKinds.berry) {
+				const tile = e.mapBuilder.tiles[actor.position.x][actor.position.y];
+				const positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
+
+				const entity = getUnderneath(e, positionKey);
+				const amt = Math.trunc(Math.random() * 10 + 1);
+				entity.collect(Items.berry, amt);
+				EntityRegistry.instance.deleteAndQuery(
+					[Movable, Destructible, Collectable],
+					(e) => {
+						return e.position.equals(positionKey);
+					},
+				);
+				tile.mask = null;
+				tile.promotable = undefined;
+				await e.mapBuilder.updateViewportTile(
+					actor.position.x,
+					actor.position.y,
+					tile,
+				);
+				await e.mapBuilder.removeCluster(e.state.currentCluster!);
+				e.menuHolder.setMenu(() =>
+					Msg({ engine: e, msg: `You have picked ${amt} berries` }),
+				);
 			} else {
 				e.menuHolder.setMenu(() =>
 					Msg({ engine: e, msg: "Punching the air..." }),
@@ -179,6 +204,23 @@ export const Items: { [key: string]: Item } = {
 			throw new Error("Function not implemented.");
 		},
 	},
+	berry: {
+		name: "berry",
+		usable: true,
+		sprite: [await assetPath("berry"), await assetPath("berry")],
+		perform: async (
+			e: Engine,
+			actor: Movable & Destructible & Syncable & Inventory,
+		): Promise<void> => {
+			actor.heal(5);
+			e.menuHolder.setMenu(() => Msg({ engine: e, msg: "You ate a berry" }));
+			actor.removeHand(actor.dominant);
+
+			if (actor.update) {
+				actor.update({ health: actor.health, hands: actor.hands });
+			}
+		},
+	},
 };
 
 export interface Inventory extends Entity {
@@ -188,6 +230,8 @@ export interface Inventory extends Entity {
 	put: (item: { count: number; item: Item }) => void;
 	handPut: (item: Item, hand: "left" | "right") => void;
 	handSwap: () => void;
+	remove: (item: { count: number; item: Item }) => void;
+	removeHand: (hand: "left" | "right") => void;
 }
 
 export const Inventory: Component<
@@ -247,6 +291,20 @@ export const Inventory: Component<
 			}
 		}
 	};
+	e.remove = (item: { count: number; item: Item }) => {
+		for (let i = 0; i < e.Items.length; i++) {
+			const slot = e.Items[i];
+			if (slot.item.name === item.item.name) {
+				e.Items[i] = {
+					count: Math.max(slot.count - item.count, 0),
+					item: item.item,
+				};
+			}
+		}
+	};
+	e.removeHand = (hand: "left" | "right") => {
+		e.hands[hand] = Items.hand;
+	};
 	return e;
 };
 
@@ -265,6 +323,7 @@ export const MenuHolder: Component<MenuHolder, { menu: () => JSX.Element }> = (
 	e.displayed = false;
 	e.Menu = init.menu;
 	e.setMenu = (menu: () => JSX.Element) => {
+		e.menuOff();
 		e.Menu = menu;
 		e.displayed = true;
 		e.update({ Menu: menu, displayed: true });

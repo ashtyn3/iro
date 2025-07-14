@@ -122,12 +122,15 @@ export class Engine {
 				await handler.perform(this, this.player);
 			}
 		});
-		document.body.addEventListener("mousedown", (e) => {
+		document.body.addEventListener("mousemove", (e) => {
 			const pos = this.display.eventToPosition(e);
 			const vp = this.viewport();
 			const cluster = this.mapBuilder.getClusterAt(
 				Vec2d({ x: vp.x + pos[0], y: vp.y + pos[1] }),
 			);
+			if (cluster) {
+				this.display.drawOver(pos[0], pos[1], null, null, "red");
+			}
 		});
 
 		window.onbeforeunload = () => confirm("Confirm refresh");

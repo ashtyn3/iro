@@ -7,6 +7,7 @@ import type { Entity, Existable } from "./types";
 export interface Destructible extends Entity {
 	health: number;
 	damage(amount: number): void;
+	heal(amount: number): void;
 	dead: boolean;
 }
 
@@ -27,6 +28,15 @@ export const Destructible: Component<Destructible, number> = (
 				e.engine.menuHolder.setMenu(() => DeathView({ engine: e.engine }));
 				return e;
 			}
+		}
+		if (e.update) {
+			e.update({ health: e.health, dead: e.dead });
+		}
+	};
+	e.heal = (amt: number) => {
+		e.health += amt;
+		if (e.health > initialHealth) {
+			e.health = initialHealth;
 		}
 		if (e.update) {
 			e.update({ health: e.health, dead: e.dead });

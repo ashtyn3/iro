@@ -10,6 +10,8 @@ import {
 } from "./comps";
 import type { Engine } from "./index";
 import { Inventory } from "./inventory";
+import { TileKinds } from "./map";
+import { Berry } from "./objects/berry";
 import { Air } from "./player";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync";
@@ -145,13 +147,17 @@ export function promote(
 	};
 	builder.add(Movable, Vec2d(pos));
 	if (tile.mask) {
-		if (tile.mask.promotable) {
-			make_entity(tile.mask.promotable.type);
-		} else if (tile.promotable) {
-			make_entity(tile.promotable.type);
+		if (tile.mask.kind === TileKinds.berry) {
+			return Berry(e, pos);
+		} else {
+			if (tile.mask.promotable) {
+				make_entity(tile.mask.promotable.type);
+			} else if (tile.promotable) {
+				make_entity(tile.promotable.type);
+			}
+			const builtEntity = builder.build() as Entity;
+			return builtEntity;
 		}
-		const builtEntity = builder.build() as Entity;
-		return builtEntity;
 	}
 	return entity;
 }

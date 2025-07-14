@@ -1,3 +1,4 @@
+import Msg from "~/components/Msg";
 import type { Engine } from "..";
 import { EntityBuilder } from "../entity";
 import { createGObject, type GObjectBase } from "../object";
@@ -29,7 +30,10 @@ export const Fire = (e: Engine, pos: Vec2d) => {
 		.add(Timed, fireEvents)
 		.add(Renderable, () => {})
 		.add(LightEmitter, { radius: 15, color: "#FF6B35", intensity: 0.8 })
-		.add(Trap, { kills: false })
+		.add(Trap, () => {
+			e.player.damage(1);
+			e.menuHolder.setMenu(() => Msg({ engine: e, msg: "You are burning..." }));
+		})
 		.build();
 
 	ext.fg = "red";

@@ -8,6 +8,7 @@ const TileKinds = {
   leafs: 5,
   struct: 6,
   tree: 7,
+  berry: 8,
 };
 
 class UnionFind {

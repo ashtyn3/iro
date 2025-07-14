@@ -17,12 +17,9 @@ export interface Trap extends GObject {
 	trapAction: () => void;
 }
 
-export const Trap: Component<
-	Trap,
-	{ kills: boolean; trapAction: () => void }
-> = (base, init) => {
+export const Trap: Component<Trap, () => void> = (base, init) => {
 	const e = base as Entity & Trap;
 	e.isTrap = true;
-	e.trapAction = init.trapAction;
+	e.trapAction = init;
 	return e;
 };

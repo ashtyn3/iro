@@ -160,8 +160,8 @@ export class GPURenderer {
 	}
 
 	private createColorBuffer(): GPUBuffer {
-		// Create array with exactly 8 entries (one for each TileKind)
-		const colorData = new Uint32Array(8 * 3);
+		// Create array with exactly 9 entries (one for each TileKind including berry)
+		const colorData = new Uint32Array(9 * 3);
 
 		// Map enum values to colors
 		const colorArray = [
@@ -173,9 +173,10 @@ export class GPURenderer {
 			COLORS.leafs, // TileKinds.leafs = 5
 			COLORS.struct, // TileKinds.struct = 6
 			COLORS.tree, // TileKinds.tree = 7
+			COLORS.berry, // TileKinds.berry = 8
 		];
 
-		for (let kind = 0; kind < 8; kind++) {
+		for (let kind = 0; kind < 9; kind++) {
 			const colors = colorArray[kind];
 			const index = kind * 3;
 			colorData[index] = this.hexToInt(colors.close);

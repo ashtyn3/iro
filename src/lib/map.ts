@@ -48,6 +48,11 @@ export const COLORS = {
 		far: "#0A0F08",
 		superFar: "#030503",
 	},
+	berry: {
+		close: "#C53030",
+		far: "#661818",
+		superFar: "#1F0808",
+	},
 };
 export enum TileKinds {
 	grass,
@@ -58,6 +63,7 @@ export enum TileKinds {
 	leafs,
 	struct,
 	tree,
+	berry,
 }
 
 export const VIEWPORT: Vec2d = Vec2d({ x: 80, y: 40 });
@@ -130,6 +136,7 @@ export class GMap {
 			[TileKinds.leafs]: [],
 			[TileKinds.struct]: [],
 			[TileKinds.tree]: [],
+			[TileKinds.berry]: [],
 		};
 		this.map = [];
 		this.saved = false;
@@ -257,8 +264,8 @@ export class GMap {
 			for (let y = 0; y < this.height; y++) {
 				const elev = this.map[x][y];
 				const tile: Tile = {
-					fg: null,
-					bg: null,
+					fg: undefined,
+					bg: undefined,
 					char: " ",
 					boundary: false,
 					mask: null,
@@ -283,6 +290,7 @@ export class GMap {
 					}
 				} else {
 					const tNoise = noise4(x * treeFreq, y * treeFreq);
+					const bNoise = noise4(x * copperFreq, y * copperFreq);
 					tile.fg = COLORS.grass.close;
 					tile.char = ".";
 					if (
@@ -296,6 +304,7 @@ export class GMap {
 							bg: "",
 							char: "$",
 							kind: TileKinds.wood,
+							promotable: tile.promotable,
 						};
 						this.tiles[x][y - 1].promotable = tile.promotable;
 						this.tiles[x][y - 1].mask = {
@@ -303,6 +312,16 @@ export class GMap {
 							bg: "",
 							char: "^",
 							kind: TileKinds.leafs,
+							promotable: tile.promotable,
+						};
+					} else if (bNoise > 0.85) {
+						tile.promotable = { type: "destructable,collectable", health: 15 };
+						tile.mask = {
+							fg: COLORS.berry.close,
+							bg: "",
+							char: "o",
+							kind: TileKinds.berry,
+							promotable: tile.promotable,
 						};
 					}
 				}
@@ -607,6 +626,7 @@ export class GMap {
 			[TileKinds.leafs]: [],
 			[TileKinds.struct]: [],
 			[TileKinds.tree]: [],
+			[TileKinds.berry]: [],
 		};
 
 		// Fallback to synchronous if workers not available
