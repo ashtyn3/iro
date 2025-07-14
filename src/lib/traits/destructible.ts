@@ -6,19 +6,21 @@ import type { Entity, Existable } from "./types";
 
 export interface Destructible extends Entity {
 	health: number;
+	maxHealth: number;
 	damage(amount: number): void;
 	heal(amount: number): void;
 	dead: boolean;
 }
 
-export const Destructible: Component<Destructible, number> = (
-	base,
-	initialHealth,
-) => {
+export const Destructible: Component<
+	Destructible,
+	{ maxHealth: number; currentHealth: number }
+> = (base, { maxHealth, currentHealth }) => {
 	const e = base as Entity & Destructible & Syncable & Named;
 	// cast once to the widened type
 	// add your data & methods
-	e.health = initialHealth;
+	e.maxHealth = maxHealth;
+	e.health = currentHealth;
 	e.dead = false;
 	e.damage = (amt: number) => {
 		e.health -= amt;
@@ -35,10 +37,9 @@ export const Destructible: Component<Destructible, number> = (
 	};
 	e.heal = (amt: number) => {
 		e.health += amt;
-		if (e.health > initialHealth) {
-			e.health = initialHealth;
+		if (e.health > e.maxHealth) {
+			e.health = e.maxHealth;
 		}
-		console.log(e.health);
 		if (e.update) {
 			e.update({ health: e.health, dead: e.dead });
 		}

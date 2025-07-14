@@ -9,6 +9,7 @@ import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
 import { KeyHandles, keyMap } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
 import { Fire } from "./objects/fire";
+import { DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
 import { type State, Vec2d } from "./state";
 import {
@@ -138,14 +139,12 @@ export class Engine {
 		window.onbeforeunload = () => confirm("Confirm refresh");
 
 		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
+		const d = DarkThing(this, Vec2d({ x: 5, y: 7 }));
 		const frame = async () => {
 			if (this.clockSystem.state === "paused") {
 				requestAnimationFrame(frame);
 				return;
 			}
-			// timed.forEach((e) => {
-			// 	e.act();
-			// });
 			this.clockSystem.act();
 			this.engine.unlock();
 			await this.render();

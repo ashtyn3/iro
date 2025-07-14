@@ -21,9 +21,11 @@ import {
 	type Entity,
 	type Existable,
 	Movable,
+	Named,
 	Storeable,
 	Timed,
 } from "./traits";
+import { Pathed } from "./traits/pathed";
 
 export type EntityTypes = "norm" | "destructable" | "collectable";
 
@@ -140,7 +142,10 @@ export function promote(
 					builder.add(Collectable, {});
 					break;
 				case "destructable":
-					builder.add(Destructible, 15);
+					builder.add(Destructible, {
+						maxHealth: 15,
+						currentHealth: 15,
+					});
 					break;
 			}
 		});
@@ -175,7 +180,10 @@ export function deserializeEntity(
 		builder.add(Movable, Vec2d(data.position));
 	}
 	if (data.health !== undefined) {
-		builder.add(Destructible, data.health);
+		builder.add(Destructible, {
+			maxHealth: data.maxHealth,
+			currentHealth: data.health,
+		});
 	}
 	if (data.act !== undefined) {
 		builder.add(Timed, data.act);
@@ -195,6 +203,13 @@ export function deserializeEntity(
 	if (data.syncable && !(existingEntity as any)?.syncable) {
 		builder.add(Syncable, data.id);
 	}
+	if (data.name) {
+		builder.add(Named, { name: data.name });
+	}
+
+	if (data.seeking) {
+		builder.add(Pathed, data.seeking);
+	}
 
 	if (data.id) {
 		builder.add(Storeable, data.id);
@@ -209,3 +224,4 @@ export function deserializeEntity(
 
 	return builtEntity;
 }
+export type { Entity };

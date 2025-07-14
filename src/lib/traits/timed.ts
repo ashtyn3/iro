@@ -19,12 +19,22 @@ export const Timed: Component<Timed, EventsBuilder> = (base, act) => {
 	events.forEach((event) => {
 		e.ownedEvents.add(event.id);
 		e.engine.clockSystem.addEvent(event.id, event.time, () => {
-			if (e["inViewport"] || e["inViewportWR"]) {
-				if (e["inViewport"]() || e["inViewportWR"]()) {
+			const hasPathfinding = "seeking" in e || "seek" in e;
+			if (hasPathfinding) {
+				// This is a pathfinding entity, always execute
+				event.callback();
+			} else {
+				// Regular entity, only execute if in viewport
+				const hasViewport = "inViewport" in e || "inViewportWR" in e;
+				if (hasViewport) {
+					const inViewport =
+						(e as any).inViewport?.() || (e as any).inViewportWR?.();
+					if (inViewport) {
+						event.callback();
+					}
+				} else {
 					event.callback();
 				}
-			} else {
-				event.callback();
 			}
 		});
 	});

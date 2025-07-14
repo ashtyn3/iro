@@ -79,7 +79,10 @@ const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {
 		.add(Renderable, () => {})
 		.add(Timed, timingChain(e))
 		.add(Named, { name: "player" })
-		.add(Destructible, 20);
+		.add(Destructible, {
+			maxHealth: 20,
+			currentHealth: 20,
+		});
 };
 
 export type PlayerType = Entity &
