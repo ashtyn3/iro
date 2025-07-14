@@ -27,4 +27,8 @@ export const defaultKeys = {
 		key: "r",
 		desc: "Swap hands",
 	},
+	pause: {
+		key: "p",
+		desc: "Pause/Resume",
+	},
 };

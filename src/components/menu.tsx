@@ -12,6 +12,7 @@ import { Engine } from "~/lib";
 import { Debug } from "~/lib/debug";
 import { DB } from "~/lib/state";
 import { api } from "../../convex/_generated/api";
+import Button from "./Button";
 import Game from "./game";
 import MainMenu from "./main-menu";
 import Settings from "./Settings";
@@ -181,52 +182,36 @@ export default function Menu() {
 
 			{currentState() === "select" && (
 				<div>
-					<button
-						type="button"
+					<Button
+						size="sm"
+						class="mb-4"
 						onClick={() => setCurrentState("Menu")}
-						class="mb-4 bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
 					>
 						&lt; BACK
-					</button>
+					</Button>
 					<div id="selector" class="flex flex-col-reverse gap-2.5">
 						<Show when={tileSets()}>
 							<For
 								each={tileSets() as Array<{ id: string; createdAt: string }>}
 							>
 								{(ts) => (
-									<button
-										type="button"
-										onClick={() => handleLoadGame(ts.id)}
-										class="bg-transparent border-2 border-white text-white text-base font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
-									>
+									<Button onClick={() => handleLoadGame(ts.id)}>
 										{new Date(ts.createdAt).toLocaleString()}
-									</button>
+									</Button>
 								)}
 							</For>
 						</Show>
 					</div>
 					<div class="flex flex-row gap-2.5 mt-4">
-						<button
-							type="button"
-							onClick={handleClear}
-							class="bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
-						>
+						<Button size="sm" onClick={handleClear}>
 							Clear
-						</button>
-						<button
-							type="button"
-							onClick={handleExportAll}
-							class="bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
-						>
+						</Button>
+						<Button size="sm" onClick={handleExportAll}>
 							Export All
-						</button>
-						<button
-							type="button"
-							onClick={handleImportAll}
-							class="bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
-						>
+						</Button>
+						<Button size="sm" onClick={handleImportAll}>
 							Import All
-						</button>
+						</Button>
 						<input
 							type="file"
 							ref={setImportFileInput}
@@ -242,13 +227,9 @@ export default function Menu() {
 
 			{currentState() === "settings" && (
 				<div>
-					<button
-						type="button"
-						onClick={() => setCurrentState("Menu")}
-						class="bg-transparent border-2 border-white text-white text-xs font-bold px-4 py-2 transition-all duration-200 ease-in-out hover:cursor-pointer hover:bg-white hover:text-black hover:-translate-y-0.5 active:translate-y-0"
-					>
+					<Button size="sm" onClick={() => setCurrentState("Menu")}>
 						&lt; BACK
-					</button>
+					</Button>
 					<Settings />
 				</div>
 			)}

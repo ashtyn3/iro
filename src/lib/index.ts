@@ -6,7 +6,7 @@ import { Clock } from "./clock";
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
 import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
-import { KeyHandles } from "./keyhandle";
+import { KeyHandles, keyMap } from "./keyhandle";
 import { GMap, VIEWPORT } from "./map";
 import { Fire } from "./objects/fire";
 import { Player, type PlayerType } from "./player";
@@ -115,6 +115,9 @@ export class Engine {
 
 		document.body.addEventListener("keydown", async (e) => {
 			const handler = KeyHandles[e.key];
+			if (this.clockSystem.state === "paused" && e.key !== keyMap().pause.key) {
+				return;
+			}
 			if (handler) {
 				await handler.perform(this, this.player);
 			}
@@ -131,6 +134,10 @@ export class Engine {
 
 		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
 		const frame = async () => {
+			if (this.clockSystem.state === "paused") {
+				requestAnimationFrame(frame);
+				return;
+			}
 			// timed.forEach((e) => {
 			// 	e.act();
 			// });

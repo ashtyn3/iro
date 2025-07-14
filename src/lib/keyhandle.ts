@@ -78,4 +78,9 @@ export const KeyHandles: { [key: string]: Act } = {
 			a.update({ hands: a.hands });
 		},
 	},
+	[keyMap().pause.key]: {
+		perform: async (e: Engine): Promise<void> => {
+			e.clockSystem.toggle();
+		},
+	},
 };
