@@ -14,12 +14,15 @@ export const Boundary: Component<Boundary, {}> = (base) => {
 
 export interface Trap extends GObject {
 	isTrap: boolean;
-	kills: boolean;
+	trapAction: () => void;
 }
 
-export const Trap: Component<Trap, { kills: boolean }> = (base, init) => {
+export const Trap: Component<
+	Trap,
+	{ kills: boolean; trapAction: () => void }
+> = (base, init) => {
 	const e = base as Entity & Trap;
 	e.isTrap = true;
-	e.kills = init.kills;
+	e.trapAction = init.trapAction;
 	return e;
 };

@@ -22,7 +22,6 @@ const timingChain = (e: Engine) =>
 	Event("AirRadius", secondsToFrames(1), () => {
 		if (e.player.air !== 0) {
 			e.mapBuilder.VIEW_RADIUS = Math.floor((e.player.air / 100) * 10);
-			console.log("AirRadius", e.mapBuilder.VIEW_RADIUS);
 		}
 
 		if (e.player.air === 0) {
@@ -30,12 +29,7 @@ const timingChain = (e: Engine) =>
 		}
 		EntityRegistry.instance.lookupAndQuery([Trap, Movable], (t) => {
 			if (t.position.equals(e.player.position)) {
-				console.log("Trap", t.kills);
-				if (!t.kills) {
-					e.player.damage(1);
-				} else {
-					e.player.damage(20);
-				}
+				t.trapAction();
 			}
 		});
 	})
