@@ -1,5 +1,6 @@
 import * as immutable from "immutable";
 import type { JSX } from "solid-js";
+import Msg from "~/components/Msg";
 import type { Act } from "./action";
 import type { Component } from "./comps";
 import { EntityBuilder, EntityRegistry, promote } from "./entity";
@@ -82,6 +83,9 @@ export const Items: { [key: string]: Item } = {
 				entity.damage(7.5);
 
 				if (entity.health <= 0) {
+					e.menuHolder.setMenu(() =>
+						Msg({ engine: e, msg: "You have felled a tree" }),
+					);
 					const tileUpdates = [];
 
 					for (const p of e.state.currentCluster.points) {

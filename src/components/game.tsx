@@ -52,6 +52,7 @@ export function HealthBar({ engine }: { engine: Engine }) {
 		</div>
 	);
 }
+
 export default function Game({ engine }: { engine: Engine }) {
 	try {
 		onMount(async () => {
