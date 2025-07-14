@@ -170,9 +170,12 @@ export default function Menu() {
 						handleNewGame={handleNewGame}
 						setCurrentState={setCurrentState}
 					/>
-					<p class="text-white text-xs absolute bottom-0 right-0">
-						VERSION: {GIT_SHA}
-					</p>
+					<div class="text-white text-xs absolute bottom-0 right-0 flex gap-4 p-4">
+						<a href="/docs" class="text-white hover:text-gray-300 no-underline">
+							GUIDE
+						</a>
+						<span>VERSION: {GIT_SHA}</span>
+					</div>
 				</>
 			)}
 
