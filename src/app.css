@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'MorePerfectDOSVGA';
+  src: url('/MorePerfectDOSVGA.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-mono: "MorePerfectDOSVGA", monospace;
+}
+
 :root {
   --background-rgb: 214, 219, 220;
   --foreground-rgb: 0, 0, 0;

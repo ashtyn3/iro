@@ -409,7 +409,7 @@ export class GMap {
 						tile.mask = {
 							fg: COLORS.wood.close,
 							bg: "",
-							char: "$",
+							char: "▲",
 							kind: TileKinds.wood,
 							promotable: tile.promotable,
 						};

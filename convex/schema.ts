@@ -45,7 +45,7 @@ export default defineSchema({
 	clusters: defineTable({
 		tileSetId: v.id("tileSets"),
 		kind: v.number(),
-		data: v.any(),
+		data: v.bytes(),
 	})
 		.index("byTileSetId", ["tileSetId"])
 		.index("byIdAndKind", ["tileSetId", "kind"]),

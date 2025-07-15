@@ -1,4 +1,6 @@
-import type { Clusters } from "../../lib/map";
+import { decode, encode } from "@msgpack/msgpack";
+import type { Cluster, Clusters } from "../../src/lib/map";
+import type { Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
 import schema from "../schema"; // wherever your TS type lives
 
@@ -19,11 +21,11 @@ export const saveClusters = mutation(
 
 		// insert and return the generated id
 		Object.keys(clusters).forEach(async (k) => {
-			const group = clusters[k];
+			const group = clusters[k as unknown as keyof Clusters];
 			await db.insert("clusters", {
-				tileSetId: tileSetId,
+				tileSetId: tileSetId as Id<"tileSets">,
 				kind: parseInt(k),
-				data: JSON.stringify(group),
+				data: encodeToArrayBuffer(group),
 			});
 		});
 
@@ -35,7 +37,9 @@ export const loadClusters = query(
 	async ({ db }, { tileSetId }: { tileSetId: string }): Promise<Clusters> => {
 		const rows = await db
 			.query("clusters")
-			.withIndex("byTileSetId", (q) => q.eq("tileSetId", tileSetId))
+			.withIndex("byTileSetId", (q) =>
+				q.eq("tileSetId", tileSetId as Id<"tileSets">),
+			)
 			.collect();
 		const result: Clusters = {
 			0: [],
@@ -46,9 +50,10 @@ export const loadClusters = query(
 			5: [],
 			6: [],
 			7: [],
+			8: [],
 		};
 		for (const row of rows) {
-			result[row.kind] = JSON.parse(row.data);
+			result[row.kind as keyof Clusters] = decode(row.data) as Cluster[];
 		}
 		return result;
 	},
@@ -72,7 +77,9 @@ export const updateClusters = mutation(
 
 		const existing = await db
 			.query("clusters")
-			.withIndex("byTileSetId", (q) => q.eq("tileSetId", tileSetId))
+			.withIndex("byTileSetId", (q) =>
+				q.eq("tileSetId", tileSetId as Id<"tileSets">),
+			)
 			.collect();
 		const existingByKind = new Map<number, string>();
 		for (const row of existing) {
@@ -81,17 +88,16 @@ export const updateClusters = mutation(
 
 		for (const kindKey of Object.keys(clusters)) {
 			const kind = parseInt(kindKey, 10);
-			const dataStr = JSON.stringify(clusters[kindKey]);
+			const dataStr = encodeToArrayBuffer(clusters[kind as keyof Clusters]);
 			if (existingByKind.has(kind)) {
-				// patch
-				await db.patch(existingByKind.get(kind)!, {
+				await db.patch(existingByKind.get(kind) as Id<"clusters">, {
 					data: dataStr,
 				});
 				existingByKind.delete(kind);
 			} else {
 				// new insert
 				await db.insert("clusters", {
-					tileSetId: tileSetId,
+					tileSetId: tileSetId as Id<"tileSets">,
 					data: dataStr,
 					kind: kind,
 				});
@@ -99,7 +105,14 @@ export const updateClusters = mutation(
 		}
 
 		for (const orphanId of existingByKind.values()) {
-			await db.delete(orphanId);
+			await db.delete(orphanId as Id<"clusters">);
 		}
 	},
 );
+function encodeToArrayBuffer(group: Cluster[]): ArrayBuffer {
+	const encoded = encode(group);
+	return encoded.buffer.slice(
+		encoded.byteOffset,
+		encoded.byteOffset + encoded.byteLength,
+	);
+}

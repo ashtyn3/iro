@@ -57,13 +57,13 @@ export class Engine {
 
 		const TILES_X = VIEWPORT.x;
 		const TILES_Y = VIEWPORT.y;
-		const FONT_PX = 18;
+		const FONT_PX = 24; // Optimal size for MorePerfectDOSVGA - crisp and readable
 
 		this.display = new ROT.Display({
 			width: TILES_X,
 			height: TILES_Y,
 			fontSize: FONT_PX,
-			fontFamily: "monospace",
+			fontFamily: "MorePerfectDOSVGA",
 			forceSquareRatio: true,
 		});
 
