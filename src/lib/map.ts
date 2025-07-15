@@ -111,6 +111,7 @@ export class GMap {
 	convex: ConvexClient;
 	saved: boolean;
 	writeQueue: { x: number; y: number; tile: Tile }[];
+	private queueFlushTimer: number | null = null;
 
 	constructor(
 		w: number,
@@ -195,29 +196,101 @@ export class GMap {
 		// Update local array
 		this.tiles[worldX][worldY] = newTile;
 
-		// Update database
+		// Always queue updates to prevent race conditions and ensure sequential processing
 		if (this.mapId) {
-			const db = new DB(this.convex);
-			if (this.saved) {
-				await db.updateViewportTiles(this.mapId, viewport, [
-					{ x: viewportX, y: viewportY, tile: newTile },
-				]);
-			} else {
-				this.writeQueue.push({ x: viewportX, y: viewportY, tile: newTile });
+			// Add to queue regardless of saved state
+			this.writeQueue.push({ x: viewportX, y: viewportY, tile: newTile });
+
+			// Limit queue size to prevent memory issues
+			if (this.writeQueue.length >= 1000) {
+				this.engine.debug.info("Write queue full, flushing early");
+				await this.flushWriteQueue();
 			}
+
+			// For saved maps, also trigger more frequent flushes to keep updates current
+			if (this.saved && this.writeQueue.length >= 50) {
+				this.engine.debug.info(
+					"Saved map: flushing queue to keep updates current",
+				);
+				await this.flushWriteQueue();
+			}
+
+			// Schedule automatic flush if not already scheduled
+			this.scheduleAutoFlush();
 		}
 	}
+	private isFlushingQueue = false;
+
 	async flushWriteQueue() {
-		this.engine.debug.info(`flushing write queue ${this.writeQueue.length}`);
-		if (this.writeQueue.length > 0) {
-			const db = new DB(this.convex);
-			await db.updateViewportTiles(
-				this.mapId,
-				this.getViewport(),
-				this.writeQueue,
-			);
-			this.writeQueue = [];
+		// Prevent concurrent flush operations
+		if (this.isFlushingQueue) {
+			this.engine.debug.info("Queue flush already in progress, skipping");
+			return;
 		}
+
+		this.engine.debug.info(`flushing write queue ${this.writeQueue.length}`);
+		if (this.writeQueue.length === 0) {
+			return;
+		}
+
+		this.isFlushingQueue = true;
+
+		try {
+			const db = new DB(this.convex);
+			const BATCH_SIZE = 200; // Smaller batches for more reliable processing
+			const queueToProcess = [...this.writeQueue]; // Create a copy to process
+			this.writeQueue = []; // Clear the queue immediately to accept new updates
+			const failedUpdates: Array<{ x: number; y: number; tile: Tile }> = [];
+
+			this.engine.debug.info(
+				`Processing ${queueToProcess.length} queued updates in batches of ${BATCH_SIZE}`,
+			);
+
+			// Process updates in batches
+			for (let i = 0; i < queueToProcess.length; i += BATCH_SIZE) {
+				const batch = queueToProcess.slice(i, i + BATCH_SIZE);
+				const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+				try {
+					await db.updateViewportTiles(this.mapId, this.getViewport(), batch);
+					this.engine.debug.info(
+						`Successfully flushed batch ${batchNum}/${Math.ceil(queueToProcess.length / BATCH_SIZE)}`,
+					);
+				} catch (error) {
+					this.engine.debug.error(
+						`Failed to flush batch ${batchNum}: ${error}`,
+					);
+					// Keep track of failed updates to retry later
+					failedUpdates.push(...batch);
+				}
+			}
+
+			// Re-add failed updates to the front of the queue for priority retry
+			if (failedUpdates.length > 0) {
+				this.writeQueue = [...failedUpdates, ...this.writeQueue];
+				this.engine.debug.warn(
+					`${failedUpdates.length} updates failed and added back to queue for retry`,
+				);
+			}
+		} finally {
+			this.isFlushingQueue = false;
+		}
+	}
+
+	private scheduleAutoFlush() {
+		// Clear existing timer if any
+		if (this.queueFlushTimer !== null) {
+			clearTimeout(this.queueFlushTimer);
+		}
+
+		// Schedule automatic flush after 2 seconds of inactivity
+		this.queueFlushTimer = window.setTimeout(() => {
+			if (this.writeQueue.length > 0) {
+				this.engine.debug.info("Auto-flushing queue after timeout");
+				this.flushWriteQueue();
+			}
+			this.queueFlushTimer = null;
+		}, 2000);
 	}
 	async genMap(): Promise<{ state: boolean; message: string }> {
 		const canMakeMap = await this.convex.query(

@@ -1,4 +1,3 @@
-import type { Tile } from "$lib/map";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
@@ -91,11 +90,11 @@ export const insertTileBlocks = mutation(
 			tileSetId,
 			blocks,
 		}: {
-			tileSetId: string;
+			tileSetId: Id<"tileSets">;
 			blocks: Array<{
 				blockX: number;
 				blockY: number;
-				data: any[][];
+				data: ArrayBuffer;
 			}>;
 		},
 	) => {
@@ -104,7 +103,7 @@ export const insertTileBlocks = mutation(
 				tileSetId,
 				blockX,
 				blockY,
-				data,
+				data: data,
 			});
 		}
 	},
@@ -115,99 +114,52 @@ export const updateViewportTiles = mutation(
 		{ db, auth },
 		{
 			tileSetId,
-			viewport,
-			blockSize,
-			tileUpdates,
+			blockUpdates,
 		}: {
-			tileSetId: string;
-			viewport: { x: number; y: number; width: number; height: number };
-			blockSize: number;
-			tileUpdates: Array<{ x: number; y: number; tile: Tile }>;
+			tileSetId: Id<"tileSets">;
+			blockUpdates: Array<{
+				blockX: number;
+				blockY: number;
+				data: ArrayBuffer; // Pre-compressed block data
+			}>;
 		},
 	) => {
-		// 1) auth / ownership check (optional)
+		// 1) auth / ownership check
 		const user = await auth.getUserIdentity();
 		if (!user) throw new Error("Not signed in");
 
-		// 2) fetch metadata to bounds‐check
+		// 2) fetch metadata to verify ownership
 		const meta = await db.get(tileSetId);
 		if (!meta) throw new Error("tileSet not found: " + tileSetId);
-		const { width: totalWidth, height: totalHeight } = meta;
 
-		// 3) group updates by block:
-		type BlockKey = string; // "bx,by"
-		interface BlockInfo {
-			id: string;
-			data: Tile[][];
-			modified: boolean;
-		}
-		const blocks = new Map<BlockKey, BlockInfo>();
+		// 3) Update each block directly
+		let updatedBlocksCount = 0;
 
-		for (const upd of tileUpdates) {
-			// 3a) validate relative coords
-			if (
-				upd.x < 0 ||
-				upd.y < 0 ||
-				upd.x >= viewport.width ||
-				upd.y >= viewport.height
-			) {
+		for (const { blockX, blockY, data } of blockUpdates) {
+			// Find the existing block
+			const rec = await db
+				.query("tileBlocks")
+				.withIndex("byTileSetAndPos", (q) =>
+					q
+						.eq("tileSetId", tileSetId)
+						.eq("blockX", blockX)
+						.eq("blockY", blockY),
+				)
+				.unique();
+
+			if (!rec) {
 				throw new Error(
-					`Update (${upd.x},${upd.y}) outside viewport ${JSON.stringify(
-						viewport,
-					)}`,
+					`Missing block (${blockX},${blockY}) in tileset ${tileSetId}`,
 				);
 			}
 
-			// 3b) compute actual coords
-			const ax = viewport.x + upd.x;
-			const ay = viewport.y + upd.y;
-			if (ax < 0 || ay < 0 || ax >= totalWidth || ay >= totalHeight) {
-				throw new Error(`Actual coord (${ax},${ay}) out of bounds`);
-			}
-
-			// 3c) which block?
-			const bx = Math.floor(ax / blockSize);
-			const by = Math.floor(ay / blockSize);
-			const key = `${bx},${by}`;
-
-			// 3d) lazy‐load block
-			if (!blocks.has(key)) {
-				const rec = await db
-					.query("tileBlocks")
-					.withIndex("byTileSetAndPos", (q) =>
-						q.eq("tileSetId", tileSetId).eq("blockX", bx).eq("blockY", by),
-					)
-					.unique();
-				if (!rec) {
-					throw new Error(
-						`Missing block (${bx},${by}) in tileset ${tileSetId}`,
-					);
-				}
-				blocks.set(key, {
-					id: rec._id,
-					data: rec.data as Tile[][],
-					modified: false,
-				});
-			}
-
-			// 3e) apply the single‐tile change inside its block array
-			const info = blocks.get(key)!;
-			const localX = ax - bx * blockSize;
-			const localY = ay - by * blockSize;
-			info.data[localX][localY] = upd.tile;
-			info.modified = true;
-		}
-
-		// 4) write back only the blocks we touched
-		for (const { id, data, modified } of blocks.values()) {
-			if (modified) {
-				await db.patch(id, { data });
-			}
+			// Update the block with the pre-compressed data
+			await db.patch(rec._id, { data });
+			updatedBlocksCount++;
 		}
 
 		return {
-			updatedTiles: tileUpdates.length,
-			updatedBlocks: [...blocks.values()].filter((b) => b.modified).length,
+			updatedBlocks: updatedBlocksCount,
 		};
 	},
 );
@@ -216,7 +168,7 @@ export const clearTileBlocksBatch = internalMutation({
 	args: {
 		tileSetId: v.id("tileSets"),
 		cursor: v.optional(v.string()),
-		userId: v.string(),
+		userId: v.id("users"),
 	},
 	handler: async ({ db, scheduler }, { tileSetId, cursor, userId }) => {
 		const batch = await db
@@ -245,7 +197,7 @@ export const clearTileBlocksBatch = internalMutation({
 });
 
 export const clearTileSetBatch = internalMutation({
-	args: { tileSetId: v.id("tileSets"), userId: v.string() },
+	args: { tileSetId: v.id("tileSets"), userId: v.id("users") },
 	handler: async ({ db, scheduler }, { tileSetId, userId }) => {
 		const batch = await db
 			.query("tileSets")
@@ -275,7 +227,7 @@ export const clearTileSetBatch = internalMutation({
 });
 
 export const clearUserDataBatch = internalMutation({
-	args: { cursor: v.optional(v.string()), userId: v.string() },
+	args: { cursor: v.optional(v.string()), userId: v.id("users") },
 	handler: async ({ db, scheduler }, { cursor, userId }) => {
 		const batch = await db
 			.query("tileSets")
@@ -324,7 +276,7 @@ export const clearClustersBatch = internalMutation({
 	args: {
 		tileSetId: v.id("tileSets"),
 		cursor: v.optional(v.string()),
-		userId: v.string(),
+		userId: v.id("users"),
 	},
 	handler: async ({ db, scheduler }, { tileSetId, cursor, userId }) => {
 		const batch = await db

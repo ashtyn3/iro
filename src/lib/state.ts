@@ -1,6 +1,9 @@
+import { decode, encode } from "@msgpack/msgpack";
+import { ZstdInit } from "@oneidentity/zstd-js";
 import type { ConvexClient } from "convex/browser";
 import * as immutable from "immutable";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { Debug } from "./debug";
 import type { Cluster, Clusters, Tile } from "./map";
 import type { Entity, Movable } from "./traits";
@@ -58,10 +61,10 @@ export interface TileChunksSchema {
 	chunk_data: string;
 }
 
-function makeBlocks(
+async function makeBlocks(
 	tiles: Tile[][],
 	blockSize: number,
-): Array<{ blockX: number; blockY: number; data: Tile[][] }> {
+): Promise<Array<{ blockX: number; blockY: number; data: ArrayBuffer }>> {
 	const w = tiles.length;
 	const h = tiles[0].length;
 	const blocks = [];
@@ -81,7 +84,22 @@ function makeBlocks(
 					data[i][j] = tiles[x][y];
 				}
 			}
-			blocks.push({ blockX: bx, blockY: by, data });
+
+			// Encode and compress with gzip
+			const encodedData = encode(data);
+			const compressor = new CompressionStream("gzip");
+			const writer = compressor.writable.getWriter();
+			writer.write(encodedData);
+			writer.close();
+			const compressedData = await new Response(
+				compressor.readable,
+			).arrayBuffer();
+
+			blocks.push({
+				blockX: bx,
+				blockY: by,
+				data: compressedData,
+			});
 		}
 	}
 	return blocks;
@@ -109,13 +127,14 @@ export class DB {
 		//     width: tiles.length,
 		//     height: tiles[0].length
 		// })
-		const allBlocks = makeBlocks(tiles, 40);
+		const allBlocks = await makeBlocks(tiles, 40);
 
 		const BATCH = 20;
 		for (let i = 0; i < allBlocks.length; i += BATCH) {
 			const batch = allBlocks.slice(i, i + BATCH);
+			Debug.getInstance().info("saving batch", batch);
 			await this.client.mutation(api.functions.saveTileSet.insertTileBlocks, {
-				tileSetId,
+				tileSetId: tileSetId as Id<"tileSets">,
 				blocks: batch,
 			});
 		}
@@ -144,10 +163,10 @@ export class DB {
 				const loadedTileSets = f_json.tile_sets;
 				const loadedClusters = f_json.clusters;
 				for (const tileSetData of f_json.tile_sets) {
-					this.saveTiles(tileSetData);
+					this.saveTiles(tileSetData.id, tileSetData.tiles);
 				}
 				for (const clusterData of f_json.clusters) {
-					this.saveClusters(clusterData);
+					this.saveClusters(clusterData.tileSetId, clusterData.clusters);
 				}
 
 				Debug.getInstance().info("Database imported successfully!");
@@ -166,6 +185,15 @@ export class DB {
 	async clear() {
 		await this.client.mutation(api.functions.saveTileSet.clearUserData, {});
 	}
+	// Helper function for compression
+	private async compressGzip(data: ArrayBuffer): Promise<ArrayBuffer> {
+		const compressor = new CompressionStream("gzip");
+		const writer = compressor.writable.getWriter();
+		writer.write(data);
+		writer.close();
+		return await new Response(compressor.readable).arrayBuffer();
+	}
+
 	// Helper function for decompression
 	private async decompressGzip(
 		compressedBuffer: ArrayBuffer,
@@ -211,16 +239,183 @@ export class DB {
 			tile: Tile;
 		}>,
 	): Promise<void> {
+		// Group updates by block and prepare compressed blocks
+		const blockSize = 40;
+		const blockUpdates = new Map<
+			string,
+			Array<{ localX: number; localY: number; tile: Tile }>
+		>();
+
+		// Group tile updates by block
+		for (const upd of tileUpdates) {
+			// Compute actual world coordinates
+			const ax = viewport.x + upd.x;
+			const ay = viewport.y + upd.y;
+
+			// Determine which block this belongs to
+			const bx = Math.floor(ax / blockSize);
+			const by = Math.floor(ay / blockSize);
+			const key = `${bx},${by}`;
+
+			// Calculate local coordinates within the block
+			const localX = ax - bx * blockSize;
+			const localY = ay - by * blockSize;
+
+			if (!blockUpdates.has(key)) {
+				blockUpdates.set(key, []);
+			}
+			blockUpdates.get(key)!.push({ localX, localY, tile: upd.tile });
+		}
+
+		// Load existing blocks and apply updates
+		const zstd = await ZstdInit();
+		const compressedBlocks: Array<{
+			blockX: number;
+			blockY: number;
+			data: ArrayBuffer;
+		}> = [];
+
+		// Get all blocks for this tileSet to avoid multiple queries
+		const { blocks } = await this.client.query(
+			api.functions.getTileSet.getTileSet,
+			{ tileSetId },
+		);
+
+		for (const [key, updates] of blockUpdates) {
+			const [bx, by] = key.split(",").map(Number);
+
+			try {
+				// Find the specific block we need
+				const block = blocks.find((b) => b.blockX === bx && b.blockY === by);
+				if (!block) {
+					throw new Error(`Block (${bx},${by}) not found`);
+				}
+
+				Debug.getInstance().info(
+					`Processing block (${bx},${by}) for updates, data size: ${block.data.byteLength}`,
+				);
+
+				// Check if data is valid
+				if (!block.data || block.data.byteLength === 0) {
+					Debug.getInstance().error(
+						`Block (${bx},${by}) has empty data, skipping`,
+					);
+					continue;
+				}
+
+				// Try to decompress and decode the existing block
+				let blockData: Tile[][];
+				try {
+					Debug.getInstance().info(
+						`Block (${bx},${by}) data type: ${typeof block.data}, byteLength: ${block.data.byteLength}`,
+					);
+
+					// Try gzip decompression first (new format)
+					Debug.getInstance().info(
+						`Block (${bx},${by}) attempting gzip decompression`,
+					);
+					const decompressedData = await this.decompressGzip(block.data);
+					blockData = decode(new Uint8Array(decompressedData)) as Tile[][];
+
+					Debug.getInstance().info(
+						`Block (${bx},${by}) gzip decompression successful`,
+					);
+				} catch (decompressError) {
+					Debug.getInstance().error(
+						`Failed to decompress block (${bx},${by}) with gzip: ${decompressError}`,
+					);
+
+					// Fallback: try legacy ZSTD format
+					try {
+						const dataBytes = new Uint8Array(block.data);
+						Debug.getInstance().info(
+							`Block (${bx},${by}) trying legacy ZSTD decompression`,
+						);
+						const decompressedData = zstd.ZstdSimple.decompress(dataBytes);
+						blockData = decode(decompressedData) as Tile[][];
+						Debug.getInstance().info(
+							`Block (${bx},${by}) legacy ZSTD decompression successful`,
+						);
+					} catch (zstdError) {
+						Debug.getInstance().error(
+							`Failed to decompress block (${bx},${by}) with ZSTD: ${zstdError}`,
+						);
+
+						// Final fallback: try as plain JSON
+						try {
+							blockData = JSON.parse(new TextDecoder().decode(block.data));
+							Debug.getInstance().info(
+								`Block (${bx},${by}) loaded as legacy JSON`,
+							);
+						} catch (jsonError) {
+							Debug.getInstance().error(
+								`Failed to parse block (${bx},${by}) as JSON: ${jsonError}`,
+							);
+							throw new Error(
+								`Block (${bx},${by}) data is corrupted or in unknown format`,
+							);
+						}
+					}
+				}
+
+				Debug.getInstance().info(
+					`Block (${bx},${by}) decompressed successfully, applying ${updates.length} updates`,
+				);
+
+				// Apply all updates for this block
+				for (const { localX, localY, tile } of updates) {
+					if (blockData[localX] && blockData[localX][localY] !== undefined) {
+						blockData[localX][localY] = tile;
+					}
+				}
+
+				// Re-compress the updated block
+				const encodedData = encode(blockData);
+				Debug.getInstance().info(
+					`Block (${bx},${by}) encoded data size: ${encodedData.byteLength}`,
+				);
+
+				// Compress using native browser gzip
+				const finalData = await this.compressGzip(encodedData);
+
+				Debug.getInstance().info(
+					`Block (${bx},${by}) gzip compression: ${encodedData.byteLength} -> ${finalData.byteLength} bytes`,
+				);
+
+				compressedBlocks.push({
+					blockX: bx,
+					blockY: by,
+					data: finalData,
+				});
+
+				Debug.getInstance().info(
+					`Block (${bx},${by}) re-compressed successfully`,
+				);
+			} catch (blockError) {
+				Debug.getInstance().error(
+					`Error processing block (${bx},${by}) for updates: ${blockError}`,
+				);
+				// Re-throw the error to fail the entire update operation
+				throw new Error(`Failed to process block (${bx},${by}): ${blockError}`);
+			}
+		}
+
+		// Validate that we have blocks to update
+		if (compressedBlocks.length === 0) {
+			Debug.getInstance().warn(
+				"No blocks to update - all updates may have been filtered out",
+			);
+			return;
+		}
+
+		Debug.getInstance().info(
+			`Sending ${compressedBlocks.length} compressed blocks to server`,
+		);
+
+		// Send the pre-compressed blocks to the server
 		await this.client.mutation(api.functions.saveTileSet.updateViewportTiles, {
-			tileSetId,
-			viewport: {
-				x: viewport.x,
-				y: viewport.y,
-				width: viewport.width,
-				height: viewport.width,
-			},
-			blockSize: 40,
-			tileUpdates, // [{ x, y, tile }, …]
+			tileSetId: tileSetId as Id<"tileSets">,
+			blockUpdates: compressedBlocks,
 		});
 	}
 	async getAllTiles() {
@@ -232,31 +427,104 @@ export class DB {
 	}
 
 	async loadTiles(id: string): Promise<Tile[][]> {
-		// 1) fetch meta + blocks
-		const { meta, blocks } = await this.client.query(
-			api.functions.getTileSet.getTileSet,
-			{ tileSetId: id },
-		);
-		const { width, height } = meta;
+		try {
+			// 1) fetch meta + blocks
+			const { meta, blocks } = await this.client.query(
+				api.functions.getTileSet.getTileSet,
+				{ tileSetId: id },
+			);
+			const { width, height } = meta;
 
-		// 2) allocate 2D array
-		const tiles2D: Tile[][] = Array.from({ length: width }, () =>
-			Array<Tile>(height),
-		);
-		const blockSize = 40;
+			Debug.getInstance().info(
+				`Loading tiles: ${width}x${height}, ${blocks.length} blocks`,
+			);
 
-		// 3) stitch blocks back in
-		for (const { blockX, blockY, data } of blocks) {
-			for (let i = 0; i < data.length; i++) {
-				const x = blockX * blockSize + i;
-				if (x >= width) continue;
-				for (let j = 0; j < data[i].length; j++) {
-					const y = blockY * blockSize + j;
-					if (y >= height) continue;
-					tiles2D[x][y] = data[i][j];
+			// 2) allocate 2D array
+			const tiles2D: Tile[][] = Array.from({ length: width }, () =>
+				Array<Tile>(height),
+			);
+			const blockSize = 40;
+			const zstd = await ZstdInit();
+
+			// 3) stitch blocks back in
+			for (const { blockX, blockY, data } of blocks) {
+				try {
+					Debug.getInstance().info(
+						`Processing block (${blockX},${blockY}), data size: ${data.byteLength}`,
+					);
+
+					// Check if data is valid
+					if (!data || data.byteLength === 0) {
+						Debug.getInstance().error(
+							`Block (${blockX},${blockY}) has empty data`,
+						);
+						continue;
+					}
+
+					// Try to decompress and decode the block
+					let decodedData: any;
+					try {
+						// Try gzip decompression first (new format)
+						const decompressedData = await this.decompressGzip(data);
+						decodedData = decode(new Uint8Array(decompressedData));
+						Debug.getInstance().info(
+							`Block (${blockX},${blockY}) gzip decompression successful`,
+						);
+					} catch (gzipError) {
+						Debug.getInstance().info(
+							`Block (${blockX},${blockY}) gzip failed, trying ZSTD: ${gzipError}`,
+						);
+						try {
+							// Fallback to ZSTD (legacy format)
+							const decompressedData = zstd.ZstdSimple.decompress(
+								new Uint8Array(data),
+							);
+							decodedData = decode(decompressedData);
+							Debug.getInstance().info(
+								`Block (${blockX},${blockY}) ZSTD decompression successful`,
+							);
+						} catch (zstdError) {
+							Debug.getInstance().error(
+								`Failed to decompress block (${blockX},${blockY}) with ZSTD: ${zstdError}`,
+							);
+							// Final fallback: try as plain JSON
+							try {
+								decodedData = JSON.parse(new TextDecoder().decode(data));
+								Debug.getInstance().info(
+									`Block (${blockX},${blockY}) loaded as plain JSON`,
+								);
+							} catch (jsonError) {
+								Debug.getInstance().error(
+									`Failed to parse block (${blockX},${blockY}) as JSON: ${jsonError}`,
+								);
+								continue; // Skip this block
+							}
+						}
+					}
+
+					Debug.getInstance().info(
+						`Block (${blockX},${blockY}) decompressed successfully, size: ${decodedData.length}x${decodedData[0]?.length || 0}`,
+					);
+
+					for (let i = 0; i < decodedData.length; i++) {
+						const x = blockX * blockSize + i;
+						if (x >= width) continue;
+						for (let j = 0; j < decodedData[i].length; j++) {
+							const y = blockY * blockSize + j;
+							if (y >= height) continue;
+							tiles2D[x][y] = decodedData[i][j];
+						}
+					}
+				} catch (blockError) {
+					Debug.getInstance().error(
+						`Error processing block (${blockX},${blockY}): ${blockError}`,
+					);
 				}
 			}
+			return tiles2D;
+		} catch (error) {
+			Debug.getInstance().error(`Error in loadTiles: ${error}`);
+			throw error;
 		}
-		return tiles2D;
 	}
 }

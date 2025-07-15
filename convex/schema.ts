@@ -29,7 +29,7 @@ export default defineSchema({
 		blockX: v.number(),
 		blockY: v.number(),
 		// store a 2D array of Tile objects
-		data: v.array(v.array(v.any())),
+		data: v.bytes(),
 	})
 		.index("byTileSetId", ["tileSetId"])
 		.index("byTileSetAndPos", ["tileSetId", "blockX", "blockY"]),

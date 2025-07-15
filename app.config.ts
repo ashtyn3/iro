@@ -11,6 +11,7 @@ export default defineConfig({
 				supported: {
 					"top-level-await": true,
 				},
+				keepNames: true,
 			},
 		},
 	},
