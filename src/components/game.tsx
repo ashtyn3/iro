@@ -5,6 +5,7 @@ import {
 	createSignal,
 	For,
 	onMount,
+	Show,
 } from "solid-js";
 import { effect } from "solid-js/web";
 import type { Engine } from "~/lib";
@@ -52,6 +53,35 @@ export function HealthBar({ engine }: { engine: Engine }) {
 		</div>
 	);
 }
+export function SaveIndicator({ engine }: { engine: Engine }) {
+	const isSaving = createMemo(() => engine.mapBuilder.isFlushingQueue);
+	const [updating, setUpdating] = createSignal(false);
+	createEffect(() => {
+		if (isSaving()) {
+			console.log("saving");
+			setUpdating(true);
+		} else {
+			setTimeout(() => {
+				setUpdating(false);
+			}, 1000);
+		}
+	});
+	return (
+		<Show when={updating()}>
+			<div class="fixed top-4 left-4 z-50 pointer-events-none">
+				<span
+					class="inline-block w-4 h-4 rounded-full bg-orange-400 animate-pulse align-middle opacity-90 shadow transition-all"
+					style={{
+						transition:
+							"opacity 0.3s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+						opacity: updating() ? 1 : 0,
+						transform: updating() ? "scale(1)" : "scale(0.5)",
+					}}
+				/>
+			</div>
+		</Show>
+	);
+}
 
 export default function Game({ engine }: { engine: Engine }) {
 	try {
@@ -63,9 +93,11 @@ export default function Game({ engine }: { engine: Engine }) {
 		const player: () => PlayerType = () => engine.player.value() as PlayerType;
 		const menu = () => engine.menuHolder.value() as MenuHolder;
 		const messageMenu = () => engine.messageMenu.value() as MenuHolder;
+		const isSaving = createMemo(() => engine.mapBuilder.isFlushingQueue);
 
 		return (
 			<div class="w-full h-full bg-black">
+				<SaveIndicator engine={engine} />
 				{menu().Menu()}
 				<div class="flex flex-row justify-between">
 					<p>{player().air}% Air</p>

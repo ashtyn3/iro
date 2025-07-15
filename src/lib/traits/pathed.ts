@@ -9,7 +9,10 @@ export interface Pathed extends Entity {
 	seeking: string;
 }
 
-export const Pathed: Component<Pathed, string> = (base, seeking) => {
+export const Pathed: Component<
+	Pathed,
+	{ seeking: string; maxDistance: number }
+> = (base, { seeking, maxDistance }) => {
 	const e = base as Entity & Pathed & Movable;
 	e.seek = () => {
 		const target = EntityRegistry.instance.singleLookup([
@@ -22,6 +25,10 @@ export const Pathed: Component<Pathed, string> = (base, seeking) => {
 
 		const dx = target.position.x - e.position.x;
 		const dy = target.position.y - e.position.y;
+		const distance = Math.sqrt(dx * dx + dy * dy);
+		if (distance > maxDistance) {
+			return;
+		}
 
 		if (dx === 0 && dy === 0) {
 			return;

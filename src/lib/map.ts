@@ -1,5 +1,6 @@
 import type { ConvexClient } from "convex/browser";
 import { createNoise2D } from "simplex-noise";
+import { createSignal } from "solid-js";
 import { api } from "~/convex/_generated/api";
 import { EntityRegistry } from "./entity";
 import { GPURenderer } from "./gpu";
@@ -111,7 +112,13 @@ export class GMap {
 	convex: ConvexClient;
 	saved: boolean;
 	writeQueue: { x: number; y: number; tile: Tile }[];
+	clusterQueue: { operation: "remove"; cluster: Cluster }[] = [];
 	private queueFlushTimer: number | null = null;
+	private _isFlushingQueue = createSignal(false);
+	public get isFlushingQueue() {
+		return this._isFlushingQueue[0]();
+	}
+	private setIsFlushingQueue = this._isFlushingQueue[1];
 
 	constructor(
 		w: number,
@@ -142,6 +149,7 @@ export class GMap {
 		this.map = [];
 		this.saved = false;
 		this.writeQueue = [];
+		this.clusterQueue = [];
 	}
 
 	getViewport(): { x: number; y: number; width: number; height: number } {
@@ -219,7 +227,6 @@ export class GMap {
 			this.scheduleAutoFlush();
 		}
 	}
-	private isFlushingQueue = false;
 
 	async flushWriteQueue() {
 		// Prevent concurrent flush operations
@@ -228,19 +235,24 @@ export class GMap {
 			return;
 		}
 
-		this.engine.debug.info(`flushing write queue ${this.writeQueue.length}`);
-		if (this.writeQueue.length === 0) {
+		this.engine.debug.info(
+			`flushing write queue ${this.writeQueue.length} tiles, ${this.clusterQueue.length} cluster ops`,
+		);
+		if (this.writeQueue.length === 0 && this.clusterQueue.length === 0) {
 			return;
 		}
 
-		this.isFlushingQueue = true;
+		this.setIsFlushingQueue(true);
 
 		try {
 			const db = new DB(this.convex);
 			const BATCH_SIZE = 200; // Smaller batches for more reliable processing
 			const queueToProcess = [...this.writeQueue]; // Create a copy to process
+			const clusterOpsToProcess = [...this.clusterQueue]; // Copy cluster operations
 			this.writeQueue = []; // Clear the queue immediately to accept new updates
+			this.clusterQueue = []; // Clear cluster queue
 			const failedUpdates: Array<{ x: number; y: number; tile: Tile }> = [];
+			const failedClusterOps: { operation: "remove"; cluster: Cluster }[] = [];
 
 			this.engine.debug.info(
 				`Processing ${queueToProcess.length} queued updates in batches of ${BATCH_SIZE}`,
@@ -265,6 +277,21 @@ export class GMap {
 				}
 			}
 
+			// Process cluster operations
+			for (const clusterOp of clusterOpsToProcess) {
+				try {
+					if (clusterOp.operation === "remove") {
+						await this.processClusterRemoval(clusterOp.cluster);
+						this.engine.debug.info(`Successfully processed cluster removal`);
+					}
+				} catch (error) {
+					this.engine.debug.error(
+						`Failed to process cluster operation: ${error}`,
+					);
+					failedClusterOps.push(clusterOp);
+				}
+			}
+
 			// Re-add failed updates to the front of the queue for priority retry
 			if (failedUpdates.length > 0) {
 				this.writeQueue = [...failedUpdates, ...this.writeQueue];
@@ -272,8 +299,15 @@ export class GMap {
 					`${failedUpdates.length} updates failed and added back to queue for retry`,
 				);
 			}
+
+			if (failedClusterOps.length > 0) {
+				this.clusterQueue = [...failedClusterOps, ...this.clusterQueue];
+				this.engine.debug.warn(
+					`${failedClusterOps.length} cluster operations failed and added back to queue for retry`,
+				);
+			}
 		} finally {
-			this.isFlushingQueue = false;
+			this.setIsFlushingQueue(false);
 		}
 	}
 
@@ -772,7 +806,7 @@ export class GMap {
 			);
 		}
 	}
-	public async removeCluster(clusterToRemove: Cluster): Promise<void> {
+	private async processClusterRemoval(clusterToRemove: Cluster): Promise<void> {
 		if (!clusterToRemove) return;
 
 		const { kind, center } = clusterToRemove;
@@ -802,6 +836,16 @@ export class GMap {
 		this.engine.debug.info(
 			`Updated clusters in database for mapId: ${this.mapId}`,
 		);
+	}
+
+	public queueClusterRemoval(clusterToRemove: Cluster): void {
+		this.clusterQueue.push({ operation: "remove", cluster: clusterToRemove });
+		this.scheduleAutoFlush();
+	}
+
+	public async removeCluster(clusterToRemove: Cluster): Promise<void> {
+		// For backward compatibility, queue the removal instead of processing immediately
+		this.queueClusterRemoval(clusterToRemove);
 	}
 
 	private processChunkWithWorker(

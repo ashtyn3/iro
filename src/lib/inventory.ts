@@ -115,6 +115,7 @@ export const Items: { [key: string]: Item } = {
 					for (const up of tileUpdates) {
 						await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
 					}
+					// Queue cluster removal - will be processed with tile updates
 					await e.mapBuilder.removeCluster(e.state.currentCluster!);
 				}
 			} else {
@@ -165,6 +166,7 @@ export const Items: { [key: string]: Item } = {
 					for (const up of tileUpdates) {
 						await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
 					}
+					// Queue cluster removal - will be processed with tile updates
 					await e.mapBuilder.removeCluster(e.state.currentCluster!);
 				}
 			} else if (e.state.currentCluster?.kind === TileKinds.berry) {
@@ -180,17 +182,31 @@ export const Items: { [key: string]: Item } = {
 						return e.position.equals(positionKey);
 					},
 				);
-				tile.mask = null;
-				tile.promotable = undefined;
-				await e.mapBuilder.updateViewportTile(
-					actor.position.x,
-					actor.position.y,
-					tile,
-				);
-				await e.mapBuilder.removeCluster(e.state.currentCluster!);
+
+				const tileUpdates = [];
+
+				for (const p of e.state.currentCluster.points) {
+					e.mapBuilder.tiles[p.x][p.y].mask = null;
+					e.mapBuilder.tiles[p.x][p.y].promotable = undefined; // Also clear promotable
+
+					const viewportCoords = e.mapBuilder.worldToViewport(p.x, p.y);
+					if (viewportCoords) {
+						const up = {
+							x: viewportCoords.x,
+							y: viewportCoords.y,
+							tile: e.mapBuilder.tiles[p.x][p.y], // Pass the modified tile
+						};
+						tileUpdates.push(up);
+					}
+				}
 				e.messageMenu.setMenu(() =>
 					Msg({ engine: e, msg: `You have picked ${amt} berries` }),
 				);
+				for (const up of tileUpdates) {
+					await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
+				}
+				// Queue cluster removal - will be processed with tile updates
+				await e.mapBuilder.removeCluster(e.state.currentCluster!);
 			} else {
 				e.messageMenu.setMenu(() =>
 					Msg({ engine: e, msg: "Punching the air..." }),

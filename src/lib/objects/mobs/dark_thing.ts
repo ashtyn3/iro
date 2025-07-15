@@ -27,7 +27,7 @@ export const DarkThing = (e: Engine, pos: Vec2d) => {
 		})
 		.add(Renderable, () => {})
 		.add(Unique, {})
-		.add(Pathed, "player")
+		.add(Pathed, { seeking: "player", maxDistance: 10 })
 		.add(Timed, events)
 		.build();
 
