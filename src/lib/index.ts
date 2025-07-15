@@ -7,9 +7,9 @@ import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
 import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
 import { KeyHandles, keyMap } from "./keyhandle";
-import { GMap, VIEWPORT } from "./map";
+import { COLORS, GMap, TileKinds, VIEWPORT } from "./map";
 import { Fire } from "./objects/fire";
-import { DarkThing } from "./objects/mobs/dark_thing";
+import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
 import { type State, Vec2d } from "./state";
 import {
@@ -123,16 +123,6 @@ export class Engine {
 			}
 			if (handler) {
 				await handler.perform(this, this.player);
-			}
-		});
-		document.body.addEventListener("mousemove", (e) => {
-			const pos = this.display.eventToPosition(e);
-			const vp = this.viewport();
-			const cluster = this.mapBuilder.getClusterAt(
-				Vec2d({ x: vp.x + pos[0], y: vp.y + pos[1] }),
-			);
-			if (cluster) {
-				this.display.drawOver(pos[0], pos[1], null, null, "red");
 			}
 		});
 

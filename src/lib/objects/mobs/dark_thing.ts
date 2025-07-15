@@ -15,7 +15,7 @@ import type { Engine } from "../..";
 import { createGObject, Unique } from "../../object";
 import { Vec2d } from "../../state";
 
-const calcDistanceBtwVecs = (a: Vec2d, b: Vec2d) => {
+export const calcDistanceBtwVecs = (a: Vec2d, b: Vec2d) => {
 	const dx = a.x - b.x;
 	const dy = a.y - b.y;
 	return Math.floor(Math.sqrt(dx * dx + dy * dy));

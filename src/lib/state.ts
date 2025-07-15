@@ -127,7 +127,7 @@ export class DB {
 		//     width: tiles.length,
 		//     height: tiles[0].length
 		// })
-		const allBlocks = await makeBlocks(tiles, 40);
+		const allBlocks = await makeBlocks(tiles, 64); // Optimized for database records
 
 		const BATCH = 20;
 		for (let i = 0; i < allBlocks.length; i += BATCH) {
@@ -240,7 +240,7 @@ export class DB {
 		}>,
 	): Promise<void> {
 		// Group updates by block and prepare compressed blocks
-		const blockSize = 40;
+		const blockSize = 64; // Optimized for database records (36 vs 81 records)
 		const blockUpdates = new Map<
 			string,
 			Array<{ localX: number; localY: number; tile: Tile }>
@@ -443,7 +443,7 @@ export class DB {
 			const tiles2D: Tile[][] = Array.from({ length: width }, () =>
 				Array<Tile>(height),
 			);
-			const blockSize = 40;
+			const blockSize = 64; // Optimized for database records (36 vs 81 records)
 			const zstd = await ZstdInit();
 
 			// 3) stitch blocks back in
