@@ -139,7 +139,7 @@ export class Engine {
 		window.onbeforeunload = () => confirm("Confirm refresh");
 
 		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
-		const d = DarkThing(this, Vec2d({ x: 5, y: 7 }));
+		const d = DarkThing(this, Vec2d({ x: 10, y: 13 }));
 		const frame = async () => {
 			if (this.clockSystem.state === "paused") {
 				requestAnimationFrame(frame);

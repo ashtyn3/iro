@@ -7,13 +7,31 @@ import { Movable, Name } from ".";
 export interface Pathed extends Entity {
 	seek: () => void;
 	seeking: string;
+	distanceToPlayer: () => number;
 }
 
 export const Pathed: Component<
 	Pathed,
-	{ seeking: string; maxDistance: number }
-> = (base, { seeking, maxDistance }) => {
+	{
+		seeking: string;
+		maxDistance: number;
+		minDistance: number;
+		passable?: (x: number, y: number) => boolean;
+	}
+> = (base, { seeking, maxDistance, minDistance, passable }) => {
 	const e = base as Entity & Pathed & Movable;
+	e.distanceToPlayer = () => {
+		const target = EntityRegistry.instance.singleLookup([
+			Name(seeking),
+			Movable,
+		]);
+		if (!target) {
+			return 0;
+		}
+		const dx = target.position.x - e.position.x;
+		const dy = target.position.y - e.position.y;
+		return Math.sqrt(dx * dx + dy * dy);
+	};
 	e.seek = () => {
 		const target = EntityRegistry.instance.singleLookup([
 			Name(seeking),
@@ -25,8 +43,11 @@ export const Pathed: Component<
 
 		const dx = target.position.x - e.position.x;
 		const dy = target.position.y - e.position.y;
-		const distance = Math.sqrt(dx * dx + dy * dy);
-		if (distance > maxDistance) {
+		const distance = Math.floor(Math.sqrt(dx * dx + dy * dy));
+		if (distance <= minDistance) {
+			return;
+		}
+		if (distance >= maxDistance) {
 			return;
 		}
 
@@ -39,7 +60,7 @@ export const Pathed: Component<
 				return false;
 			}
 			const tile = e.engine.mapBuilder.tiles[x]?.[y];
-			return tile && !tile.boundary;
+			return tile && !tile.boundary && (!passable || passable(x, y));
 		};
 
 		const pathfinder = new ROT.Path.AStar(
