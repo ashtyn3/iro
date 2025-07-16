@@ -67,6 +67,16 @@ export default function Menu() {
 			setTileSetsQuery(null);
 		}
 	});
+	const [loadingSeconds, setLoadingSeconds] = createSignal(0);
+	createEffect(() => {
+		if (currentState() === "loading") {
+			setInterval(() => {
+				setLoadingSeconds(loadingSeconds() + 1);
+			}, 1000);
+		} else {
+			setLoadingSeconds(0);
+		}
+	});
 
 	const tileSets = () => {
 		const query = tileSetsQuery();
@@ -223,7 +233,7 @@ export default function Menu() {
 				</div>
 			)}
 
-			{currentState() === "loading" && <p>WAIT</p>}
+			{currentState() === "loading" && <p>WAIT ({loadingSeconds()}s)</p>}
 
 			{currentState() === "settings" && (
 				<div>
