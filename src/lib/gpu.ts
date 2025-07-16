@@ -1,6 +1,6 @@
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
-import { COLORS, type Tile, TileKinds, VIEWPORT } from "./map";
+import { COLORS, GMap, type Tile, TileKinds, VIEWPORT } from "./map";
 import shader from "./shaders.wgsl?raw";
 import { Vec2d } from "./state";
 import { LightEmitter, type LightSource, Movable, Named } from "./traits";
@@ -160,8 +160,8 @@ export class GPURenderer {
 	}
 
 	private createColorBuffer(): GPUBuffer {
-		// Create array with exactly 9 entries (one for each TileKind including berry)
-		const colorData = new Uint32Array(9 * 3);
+		// Create array with exactly 10 entries (one for each TileKind including cursor)
+		const colorData = new Uint32Array(10 * 3);
 
 		// Map enum values to colors
 		const colorArray = [
@@ -174,9 +174,10 @@ export class GPURenderer {
 			COLORS.struct, // TileKinds.struct = 6
 			COLORS.tree, // TileKinds.tree = 7
 			COLORS.berry, // TileKinds.berry = 8
+			COLORS.cursor, // TileKinds.cursor = 9
 		];
 
-		for (let kind = 0; kind < 9; kind++) {
+		for (let kind = 0; kind < 10; kind++) {
 			const colors = colorArray[kind];
 			const index = kind * 3;
 			colorData[index] = this.hexToInt(colors.close);
@@ -201,9 +202,9 @@ export class GPURenderer {
 		viewRadius: number;
 		lightCount: number;
 	}): GPUBuffer {
-		const STEPS = 5;
-		const DITHER_RADIUS = 10;
-		const SUPER_FAR_RADIUS = 20;
+		const STEPS = GMap.DITHER_STEPS;
+		const DITHER_RADIUS = GMap.DITHER_RADIUS;
+		const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
 
 		const paramsData = new ArrayBuffer(44); // Increased size for light_count
 		const view = new DataView(paramsData);

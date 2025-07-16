@@ -128,7 +128,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     
     // Ensure color_kind is within bounds
-    if color_kind >= 9u {
+    if color_kind >= 10u {
         color_kind = 0u;
     }
 

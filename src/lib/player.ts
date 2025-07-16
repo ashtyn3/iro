@@ -3,6 +3,7 @@ import type { Component } from "./comps";
 import { createEntity, EntityBuilder, EntityRegistry } from "./entity";
 import type { Engine } from "./index";
 import { Inventory, type Item, Items } from "./inventory";
+import { GMap } from "./map";
 import { Vec2d } from "./state";
 import { Syncable } from "./sync";
 import type { Entity } from "./traits";
@@ -21,7 +22,10 @@ import { Trap } from "./traits/object_props";
 const timingChain = (e: Engine) =>
 	Event("AirRadius", secondsToFrames(1), () => {
 		if (e.player.air !== 0) {
-			e.mapBuilder.VIEW_RADIUS = Math.floor((e.player.air / 100) * 10);
+			e.mapBuilder.VIEW_RADIUS = Math.floor(
+				(e.player.air / 100) * GMap.VIEW_RADIUS_BASE,
+			);
+			console.log("view radius", e.mapBuilder.viewableDistance());
 		}
 
 		if (e.player.air === 0) {

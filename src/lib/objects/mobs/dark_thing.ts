@@ -1,3 +1,4 @@
+import Msg from "~/components/Msg";
 import { EntityBuilder, EntityRegistry } from "~/lib/entity";
 import {
 	Destructible,
@@ -12,6 +13,7 @@ import {
 } from "~/lib/traits";
 import { Pathed } from "~/lib/traits/pathed";
 import type { Engine } from "../..";
+import { GMap } from "../../map";
 import { createGObject, Unique } from "../../object";
 import { Vec2d } from "../../state";
 
@@ -22,7 +24,7 @@ export const calcDistanceBtwVecs = (a: Vec2d, b: Vec2d) => {
 };
 export const DarkThing = (e: Engine, pos: Vec2d) => {
 	const base = createGObject(e, "dark_thing", Vec2d({ x: 1, y: 1 }), pos, [
-		"o",
+		"z",
 	]);
 
 	const events = Event("path_find", secondsToFrames(0.3), () => {
@@ -37,14 +39,14 @@ export const DarkThing = (e: Engine, pos: Vec2d) => {
 		.add(Unique, {})
 		.add(Pathed, {
 			seeking: "player",
-			maxDistance: 10,
+			maxDistance: GMap.VIEW_RADIUS_BASE,
 			minDistance: 1,
 			passable: (x, y) => {
 				const target = EntityRegistry.instance.lookupAndQuery(
 					[Movable, Name("fire")],
 					(e) => {
 						const distance = calcDistanceBtwVecs(Vec2d({ x, y }), e.position);
-						if (distance > 8) {
+						if (distance > GMap.VIEW_RADIUS_BASE - 2) {
 							return false;
 						}
 						return true;
@@ -74,7 +76,7 @@ export const DarkThing = (e: Engine, pos: Vec2d) => {
 		const vp = e.viewport();
 		const px = ext.position.x - vp.x;
 		const py = ext.position.y - vp.y;
-		e.display.draw(px, py, "X", color, null);
+		e.display.draw(px, py, ext.sprite[0], color, null);
 	};
 
 	return ext;

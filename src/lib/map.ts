@@ -54,6 +54,11 @@ export const COLORS = {
 		far: "#661818",
 		superFar: "#1F0808",
 	},
+	cursor: {
+		close: "#FFFF00",
+		far: "#B3B300",
+		superFar: "#666600",
+	},
 };
 export enum TileKinds {
 	grass,
@@ -65,6 +70,7 @@ export enum TileKinds {
 	struct,
 	tree,
 	berry,
+	cursor,
 }
 
 export const VIEWPORT: Vec2d = Vec2d({ x: 80, y: 40 });
@@ -76,7 +82,7 @@ export type Cluster = {
 };
 
 export type Clusters = {
-	[key in TileKinds]: Cluster[];
+	[key in Exclude<TileKinds, TileKinds.cursor>]: Cluster[];
 };
 
 export interface promotion {
@@ -100,6 +106,12 @@ export interface Tile {
 }
 
 export class GMap {
+	// Distance constants for rendering
+	public static readonly VIEW_RADIUS_BASE = 10;
+	public static readonly DITHER_RADIUS = 10;
+	public static readonly SUPER_FAR_RADIUS = 20;
+	public static readonly DITHER_STEPS = 5;
+
 	width: number;
 	height: number;
 	map: number[][];
@@ -440,6 +452,21 @@ export class GMap {
 		this.engine.debug.info("finish clusters");
 		return { state: true, message: "Map created" };
 	}
+	public viewableDistance(): number {
+		const player = this.engine.player;
+		const distance = Math.sqrt(
+			player.position.x * player.position.x +
+				player.position.y * player.position.y,
+		);
+
+		const maxViewRadius = Math.floor(
+			(player.air / 100) * GMap.VIEW_RADIUS_BASE,
+		);
+
+		const maxDetailedViewDistance = maxViewRadius + GMap.DITHER_RADIUS;
+
+		return Math.floor(Math.min(distance, maxDetailedViewDistance));
+	}
 
 	public async loadMap(id: string): Promise<boolean> {
 		const db = new DB(this.convex);
@@ -506,7 +533,7 @@ export class GMap {
 		);
 	}
 
-	public VIEW_RADIUS = 10;
+	public VIEW_RADIUS = GMap.VIEW_RADIUS_BASE;
 
 	// Fixed GPU render method
 	async GPURender() {
@@ -540,9 +567,9 @@ export class GMap {
 
 	// CPU fallback rendering
 	renderCPU() {
-		const STEPS = 5;
-		const DITHER_RADIUS = 5;
-		const SUPER_FAR_RADIUS = 20;
+		const STEPS = GMap.DITHER_STEPS;
+		const DITHER_RADIUS = GMap.DITHER_RADIUS;
+		const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
 
 		const vp = this.engine.viewport();
 		this.engine.display.clear();

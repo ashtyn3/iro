@@ -7,7 +7,7 @@ import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
 import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
 import { KeyHandles, keyMap } from "./keyhandle";
-import { COLORS, GMap, TileKinds, VIEWPORT } from "./map";
+import { COLORS, GMap, type Tile, TileKinds, VIEWPORT } from "./map";
 import { Fire } from "./objects/fire";
 import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
@@ -123,6 +123,43 @@ export class Engine {
 			}
 			if (handler) {
 				await handler.perform(this, this.player);
+			}
+		});
+
+		let lastPos: Vec2d | null = null;
+		let lastTile: Tile | null = null;
+		document.getElementById("gamebox")?.addEventListener("mousemove", (e) => {
+			const pos = this.display.eventToPosition(e);
+			const posVec = Vec2d({ x: pos[0], y: pos[1] });
+
+			// Reset the previous tile by restoring its original state
+			if (lastPos && lastTile && !lastPos.equals(posVec)) {
+				this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
+			}
+
+			if (
+				(!lastPos || !lastPos.equals(posVec)) &&
+				this.mapBuilder.tiles[posVec.x][posVec.y].mask?.kind !==
+					TileKinds.cursor
+			) {
+				// Store the current tile before modifying it
+				lastTile = { ...this.mapBuilder.tiles[posVec.x][posVec.y] };
+			}
+
+			// Add cursor mask to current tile
+			this.mapBuilder.tiles[posVec.x][posVec.y].mask = {
+				fg: COLORS.cursor.close,
+				bg: "",
+				char: "X",
+				kind: TileKinds.cursor,
+				promotable: { type: "cursor" },
+			};
+
+			lastPos = posVec;
+			const viewDistance = this.mapBuilder.viewableDistance();
+			const distance = calcDistanceBtwVecs(posVec, this.player.position);
+			if (distance < viewDistance) {
+				console.log("visible");
 			}
 		});
 
