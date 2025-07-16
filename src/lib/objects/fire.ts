@@ -29,7 +29,12 @@ export const Fire = (e: Engine, pos: Vec2d) => {
 	const ext = new EntityBuilder(base)
 		.add(Timed, fireEvents)
 		.add(Renderable, () => {})
-		.add(LightEmitter, { radius: 15, color: "#FF6B35", intensity: 0.8 })
+		.add(LightEmitter, {
+			radius: 15, // Increased radius to make dithering effect more visible
+			color: "#FF6B35",
+			intensity: 0.8,
+			neutralPercentage: 0.4, // 85% natural color for excellent resource visibility with warm fire ambiance
+		})
 		.add(Trap, () => {
 			e.player.damage(1);
 			e.messageMenu.setMenu(() =>

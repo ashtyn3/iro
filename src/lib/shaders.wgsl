@@ -23,6 +23,7 @@ struct LightSource {
     radius: f32,
     color: u32,
     intensity: f32,
+    neutral_percentage: f32, // 0 = full natural color, 1 = full light color, 0.5 = 50/50 blend
 }
 
 struct RenderParams {
@@ -77,8 +78,21 @@ fn dither(total_dist: f32, hi_dist: f32, dith_dist: f32, steps: u32, start: vec3
     return interpolate_color(start_interp, end_interp, factor * f32(steps) - f32(step));
 }
 
-fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32>) -> vec3<f32> {
-    var final_color = base_color;
+fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32>, tile_kind: u32, has_mask: u32, mask_kind: u32) -> vec3<f32> {
+    // If no lights, return the distance-based color
+    if params.light_count == 0u {
+        return base_color;
+    }
+    
+    // Get the tile's bright "close" color
+    var kind_to_use = tile_kind;
+    if has_mask != 0u {
+        kind_to_use = mask_kind;
+    }
+    let tile_close_color = hex_to_rgb(colors[kind_to_use].close);
+
+    var result_color = base_color;
+    var max_light_influence = 0.0;
     
     // Process each light source
     for (var i = 0u; i < params.light_count; i = i + 1u) {
@@ -89,16 +103,52 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
         
         // Only apply light if within radius
         if light_dist <= light.radius {
-            let light_color = hex_to_rgb(light.color);
-            let light_falloff = 1.0 - (light_dist / light.radius);
-            let light_strength = light.intensity * light_falloff * light_falloff; // Quadratic falloff
+            // Use exact same logic as player's view distance
+            let inner_radius = light.radius * 0.6; // 60% of radius is full strength
+            let dither_radius = light.radius * 0.4; // 40% of radius for dithering
             
-            // Blend light color with base color
-            final_color = interpolate_color(final_color, light_color, light_strength * 0.5);
+            // Calculate blend based on neutral percentage
+            let neutral_percentage = light.neutral_percentage;
+            let light_color = hex_to_rgb(light.color);
+            
+            // Blend between natural tile color and light color
+            let natural_blend = neutral_percentage;
+            let light_blend = 1.0 - neutral_percentage;
+            let bright_color = tile_close_color * natural_blend + light_color * light_blend;
+
+            var final_light_color: vec3<f32>;
+            if light_dist <= inner_radius {
+                // Full bright color in inner radius (same as player's close range)
+                final_light_color = bright_color;
+            } else if light_dist <= light.radius {
+                // Apply dithering in outer radius (same as player's dither range)
+                final_light_color = dither(
+                    light_dist,
+                    inner_radius,
+                    dither_radius,
+                    params.steps,
+                    bright_color,   // Start with bright light color
+                    base_color      // Dither to distance-based color
+                );
+            } else {
+                final_light_color = base_color;
+            }
+            
+            // Use the strongest light influence
+            let light_influence = select(
+                max(0.0, 1.0 - ((light_dist - inner_radius) / dither_radius)),
+                1.0,
+                light_dist <= inner_radius
+            );
+
+            if light_influence > max_light_influence {
+                max_light_influence = light_influence;
+                result_color = final_light_color;
+            }
         }
     }
 
-    return final_color;
+    return result_color;
 }
 
 @compute @workgroup_size(8, 8)
@@ -151,7 +201,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     
     // Apply light contributions
-    fg_rgb = calculate_light_contribution(wx, wy, fg_rgb);
+    fg_rgb = calculate_light_contribution(wx, wy, fg_rgb, tile.kind, tile.has_mask, tile.mask_kind);
 
     var char_to_use = tile.char;
     var bg_to_use = tile.bg_color;

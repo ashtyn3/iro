@@ -320,7 +320,9 @@ const COMPONENT_MAP: Record<
 		component: LightEmitter,
 		getParams: (data: any) => ({
 			radius: data.lightRadius || 3,
+			color: data.lightColor || "#FFFFFF",
 			intensity: data.lightIntensity || 1.0,
+			neutralPercentage: data.lightNeutralPercentage ?? 0,
 		}),
 	},
 	Boundary: {

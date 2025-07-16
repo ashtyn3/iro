@@ -74,24 +74,25 @@ export class GPURenderer {
 	}
 
 	private createLightBuffer(lights: LightSource[]): GPUBuffer {
-		// Each light source: x, y, radius, color, intensity (5 floats, but color is u32)
-		const lightData = new Float32Array(lights.length * 5);
+		// Each light source: x, y, radius, color, intensity, neutral_percentage (6 floats, but color is u32 and neutral_percentage is float)
+		const lightData = new Float32Array(lights.length * 6);
 
 		for (let i = 0; i < lights.length; i++) {
 			const light = lights[i];
-			const offset = i * 5;
+			const offset = i * 6;
 			lightData[offset] = light.x;
 			lightData[offset + 1] = light.y;
 			lightData[offset + 2] = light.radius;
 			// Color needs to be stored as u32 but we'll use a view to write it
 			lightData[offset + 4] = light.intensity;
+			lightData[offset + 5] = light.neutralPercentage; // Use the correct property name
 		}
 
 		// Create a uint32 view to write colors
-		const colorView = new Uint32Array(lightData.buffer);
+		const uint32View = new Uint32Array(lightData.buffer);
 		for (let i = 0; i < lights.length; i++) {
-			const colorIndex = i * 5 + 3; // 3rd element in each light (after x, y, radius)
-			colorView[colorIndex] = this.hexToInt(lights[i].color);
+			const colorIndex = i * 6 + 3; // 3rd element in each light (after x, y, radius)
+			uint32View[colorIndex] = this.hexToInt(lights[i].color);
 		}
 
 		const buffer = this.device.createBuffer({

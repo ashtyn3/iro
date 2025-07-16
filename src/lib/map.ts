@@ -690,7 +690,22 @@ export class GMap {
 		baseColor: string,
 		lights: LightSource[],
 	): string {
-		let baseRgb = this.hexToRgb(baseColor);
+		// If no lights, return the distance-based color
+		if (lights.length === 0) {
+			return baseColor;
+		}
+
+		// Get the tile to determine its "close" (bright) color
+		const tile = this.tiles[worldX][worldY];
+		const kindName = TileKinds[tile.kind] as keyof typeof COLORS;
+		let tileColors = COLORS[kindName];
+		if (tile.mask != null) {
+			const maskKindName = TileKinds[tile.mask.kind] as keyof typeof COLORS;
+			tileColors = COLORS[maskKindName];
+		}
+
+		let resultColor = baseColor;
+		let maxLightInfluence = 0;
 
 		// Process each light source
 		for (const light of lights) {
@@ -700,20 +715,56 @@ export class GMap {
 
 			// Only apply light if within radius
 			if (lightDist <= light.radius) {
-				const lightRgb = this.hexToRgb(light.color);
-				const lightFalloff = 1.0 - lightDist / light.radius;
-				const lightStrength = light.intensity * lightFalloff * lightFalloff; // Quadratic falloff
+				// Use exact same logic as player's view distance
+				const innerRadius = light.radius * 0.6; // 60% of radius is full strength
+				const ditherRadius = light.radius * 0.4; // 40% of radius for dithering
 
-				// Blend light color with base color
-				baseRgb = this.interpolateColorRgb(
-					baseRgb,
-					lightRgb,
-					lightStrength * 0.5,
+				// Calculate blend based on neutral percentage
+				const neutralPercentage = light.neutralPercentage ?? 0;
+				const lightRgb = this.hexToRgb(light.color);
+				const tileRgb = this.hexToRgb(tileColors.close);
+
+				// Blend between natural tile color and light color
+				const naturalBlend = neutralPercentage;
+				const lightBlend = 1.0 - neutralPercentage;
+				const brightColor = this.rgbToHex(
+					tileRgb[0] * naturalBlend + lightRgb[0] * lightBlend,
+					tileRgb[1] * naturalBlend + lightRgb[1] * lightBlend,
+					tileRgb[2] * naturalBlend + lightRgb[2] * lightBlend,
 				);
+
+				let lightColor: string;
+				if (lightDist <= innerRadius) {
+					// Full bright color in inner radius (same as player's close range)
+					lightColor = brightColor;
+				} else if (lightDist <= light.radius) {
+					// Apply dithering in outer radius (same as player's dither range)
+					lightColor = this.dither(
+						lightDist,
+						innerRadius,
+						ditherRadius,
+						GMap.DITHER_STEPS,
+						brightColor, // Start with bright light color
+						baseColor, // Dither to distance-based color
+					);
+				} else {
+					lightColor = baseColor;
+				}
+
+				// Use the strongest light influence
+				const lightInfluence =
+					lightDist <= innerRadius
+						? 1.0
+						: Math.max(0, 1.0 - (lightDist - innerRadius) / ditherRadius);
+
+				if (lightInfluence > maxLightInfluence) {
+					maxLightInfluence = lightInfluence;
+					resultColor = lightColor;
+				}
 			}
 		}
 
-		return this.rgbToHex(baseRgb[0], baseRgb[1], baseRgb[2]);
+		return resultColor;
 	}
 
 	// Fixed: Make render async or handle promise properly
@@ -733,7 +784,9 @@ export class GMap {
 		const clusters = this.computedClusters;
 		this.clusterIndex = new Map();
 
-		for (const kind of Object.keys(this.computedClusters) as TileKinds[]) {
+		for (const kind of Object.keys(this.computedClusters) as Array<
+			keyof Clusters
+		>) {
 			for (const cluster of this.computedClusters[kind]) {
 				for (const pt of cluster.points) {
 					const key = `${pt.x},${pt.y}`;
@@ -745,7 +798,7 @@ export class GMap {
 
 	public getClusterAt(pt: Vec2d): Cluster | undefined {
 		if (!this.clusterIndex) this.buildClusterIndex();
-		const t = this.clusterIndex.get(`${pt.x},${pt.y}`);
+		const t = this.clusterIndex?.get(`${pt.x},${pt.y}`);
 		if (t?.kind === TileKinds.wood || t?.kind === TileKinds.leafs)
 			return { ...t, kind: TileKinds.tree };
 		return t;

@@ -8,24 +8,32 @@ export interface LightSource {
 	radius: number;
 	color: string;
 	intensity: number;
+	neutralPercentage: number; // 0 = full light color, 1 = full natural color, 0.5 = 50/50 blend
 }
 
 export interface LightEmitter extends Existable {
 	lightRadius: number;
 	lightColor: string;
 	lightIntensity: number;
+	lightNeutralPercentage: number;
 	getLightSource: () => LightSource;
 	inViewportWR: () => boolean;
 }
 
 export const LightEmitter: Component<
 	LightEmitter,
-	{ radius: number; color: string; intensity: number }
+	{
+		radius: number;
+		color: string;
+		intensity: number;
+		neutralPercentage?: number; // 0 = full light color, 1 = full natural color
+	}
 > = (base, init) => {
 	const e = base as Entity & LightEmitter;
 	e.lightRadius = init.radius;
 	e.lightColor = init.color;
 	e.lightIntensity = init.intensity;
+	e.lightNeutralPercentage = init.neutralPercentage ?? 0; // Default to full light color
 
 	e.getLightSource = (): LightSource => {
 		const position = (e as any).position;
@@ -40,8 +48,10 @@ export const LightEmitter: Component<
 			radius: e.lightRadius,
 			color: e.lightColor,
 			intensity: e.lightIntensity,
+			neutralPercentage: e.lightNeutralPercentage,
 		};
 	};
+
 	e.inViewportWR = () => {
 		const lightSource = e.getLightSource();
 		const viewport = e.engine.viewport();

@@ -10,6 +10,7 @@ import type { Entity } from "./traits";
 import {
 	Destructible,
 	Event,
+	LightEmitter,
 	Movable,
 	Named,
 	Renderable,
