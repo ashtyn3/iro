@@ -138,6 +138,17 @@ export class Engine {
 			}
 
 			if (
+				posVec.x < 0 ||
+				posVec.y < 0 ||
+				posVec.x >= this.width ||
+				posVec.y >= this.height
+			) {
+				lastTile = null;
+				lastPos = null;
+				return;
+			}
+
+			if (
 				(!lastPos || !lastPos.equals(posVec)) &&
 				this.mapBuilder.tiles[posVec.x][posVec.y].mask?.kind !==
 					TileKinds.cursor
