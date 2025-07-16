@@ -59,8 +59,8 @@ export const DarkThing = (e: Engine, pos: Vec2d) => {
 		.build();
 
 	const ColorStates = {
-		close: "#cccccc", // Brightest when close
-		far: "#888888", // Medium at mid distance
+		close: "#cccccc",
+		far: "#888888",
 	};
 	ext.render = () => {
 		const viewRadius = e.mapBuilder.VIEW_RADIUS;

@@ -4,20 +4,18 @@ import { v } from "convex/values";
 export default defineSchema({
 	users: defineTable({
 		name: v.string(),
-		externalId: v.string(), // Clerk user ID
+		externalId: v.string(),
 	}).index("byExternalId", ["externalId"]),
 
 	tileSets: defineTable({
 		width: v.number(),
 		height: v.number(),
-		// you can store a real Date rather than ISO‐string if you prefer:
+
 		createdAt: v.string(),
 		owner: v.id("users"),
 		empty_blocks: v.optional(v.boolean()),
 		empty_clusters: v.optional(v.boolean()),
-	})
-		// optionally index by owner if you need to list all sets for a user:
-		.index("byOwner", ["owner"]),
+	}).index("byOwner", ["owner"]),
 
 	settings: defineTable({
 		keyMap: v.any(),
@@ -28,7 +26,7 @@ export default defineSchema({
 		tileSetId: v.id("tileSets"),
 		blockX: v.number(),
 		blockY: v.number(),
-		// store a 2D array of Tile objects
+
 		data: v.bytes(),
 	})
 		.index("byTileSetId", ["tileSetId"])

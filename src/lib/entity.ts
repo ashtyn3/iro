@@ -1,5 +1,3 @@
-// entity.ts
-
 import * as immutable from "immutable";
 import SuperJSON from "superjson";
 import {
@@ -133,23 +131,18 @@ export class EntityBuilder<
 	}
 }
 
-// Custom serializer for component sets that contain symbols
 SuperJSON.registerCustom(
 	{
 		serialize: (set: immutable.Set<symbol>) => {
-			// Convert symbols to their string keys for serialization
 			return set.toArray().map((sym) => {
 				const key = Symbol.keyFor(sym);
 				if (key !== undefined) return key;
-				// For symbols without keys, use the description or a fallback
 				return sym.description || `Symbol_${sym.toString().slice(7, -1)}`;
 			});
 		},
 		deserialize: (arr: string[]) => {
-			// Convert string keys back to symbols
 			return immutable.Set(
 				arr.map((key) => {
-					// Handle empty string keys by using a fallback
 					if (key === "") return Symbol.for("unnamed");
 					return Symbol.for(key);
 				}),
@@ -170,7 +163,6 @@ SuperJSON.registerCustom(
 	"immutable.Set<symbol>",
 );
 
-// Keep the general immutable.Set serializer for other sets
 SuperJSON.registerCustom(
 	{
 		serialize: (set: immutable.Set<any>) => set.toArray(),
@@ -184,27 +176,22 @@ SuperJSON.registerCustom(
 					!arr.every((item: any) => typeof item === "symbol")
 				);
 			} catch {
-				return true; // If we can't check, assume it's a regular set
+				return true;
 			}
 		},
 	},
 	"immutable.Set",
 );
 
-// Custom serializer for Vec2d immutable records
 SuperJSON.registerCustom(
 	{
 		serialize: (vec2d: any) => {
-			// Convert Vec2d to plain object for serialization
 			return { x: vec2d.x, y: vec2d.y };
 		},
 		deserialize: (data: any) => {
-			// Convert plain object back to Vec2d
 			return Vec2d(data);
 		},
 		isApplicable: (v: any): v is any => {
-			// Check if this is a Vec2d (has x, y properties and is an immutable record)
-			// Use a more reliable check that works with minification
 			return (
 				v &&
 				typeof v === "object" &&
@@ -262,7 +249,6 @@ export function promote(
 	return entity;
 }
 
-// Component mapping for deserialization
 const COMPONENT_MAP: Record<
 	string,
 	{ component: any; getParams: (data: any) => any }
@@ -352,36 +338,29 @@ export function deserializeEntity(
 	data: any,
 	existingEntity?: Entity,
 ): Entity {
-	// For known entity types, try to find existing entity in registry
 	if (data.name === "player") {
 		const existingPlayer = EntityRegistry.instance.lookupByName("player");
 		if (existingPlayer) {
-			// Update existing player entity with new data
 			Object.assign(existingPlayer, data);
 			return existingPlayer;
 		} else {
-			// Create new player if none exists
 			return Player(engine, data.char || "@", data.dominant || "right");
 		}
 	} else if (data.name === "fire") {
 		const existingFire = EntityRegistry.instance.lookupByName("fire");
 		if (existingFire) {
-			// Update existing fire entity
 			Object.assign(existingFire, data);
 			return existingFire;
 		} else {
-			// Create new fire entity
 			return Fire(engine, data.position);
 		}
 	} else if (data.name === "dark_thing") {
 		const existingDarkThing =
 			EntityRegistry.instance.lookupByName("dark_thing");
 		if (existingDarkThing) {
-			// Update existing dark thing entity
 			Object.assign(existingDarkThing, data);
 			return existingDarkThing;
 		} else {
-			// Create new dark thing entity
 			return DarkThing(engine, data.position);
 		}
 	}

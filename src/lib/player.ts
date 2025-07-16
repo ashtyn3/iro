@@ -26,7 +26,6 @@ const timingChain = (e: Engine) =>
 			e.mapBuilder.VIEW_RADIUS = Math.floor(
 				(e.player.air / 100) * GMap.VIEW_RADIUS_BASE,
 			);
-			console.log("view radius", e.mapBuilder.viewableDistance());
 		}
 
 		if (e.player.air === 0) {

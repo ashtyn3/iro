@@ -30,10 +30,10 @@ export const Fire = (e: Engine, pos: Vec2d) => {
 		.add(Timed, fireEvents)
 		.add(Renderable, () => {})
 		.add(LightEmitter, {
-			radius: 15, // Increased radius to make dithering effect more visible
+			radius: 15,
 			color: "#FF6B35",
 			intensity: 0.8,
-			neutralPercentage: 0.4, // 85% natural color for excellent resource visibility with warm fire ambiance
+			neutralPercentage: 0.4,
 		})
 		.add(Trap, () => {
 			e.player.damage(1);

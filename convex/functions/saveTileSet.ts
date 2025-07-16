@@ -60,7 +60,6 @@ export const death = mutation(
 	},
 );
 
-// 1) Create just the tileset record
 export const createTileSet = mutation(
 	async (
 		{ db, auth },
@@ -82,7 +81,6 @@ export const createTileSet = mutation(
 	},
 );
 
-// 2) Insert *blocks* of tiles, one small array at a time
 export const insertTileBlocks = mutation(
 	async (
 		{ db },
@@ -120,23 +118,19 @@ export const updateViewportTiles = mutation(
 			blockUpdates: Array<{
 				blockX: number;
 				blockY: number;
-				data: ArrayBuffer; // Pre-compressed block data
+				data: ArrayBuffer;
 			}>;
 		},
 	) => {
-		// 1) auth / ownership check
 		const user = await auth.getUserIdentity();
 		if (!user) throw new Error("Not signed in");
 
-		// 2) fetch metadata to verify ownership
 		const meta = await db.get(tileSetId);
 		if (!meta) throw new Error("tileSet not found: " + tileSetId);
 
-		// 3) Update each block directly
 		let updatedBlocksCount = 0;
 
 		for (const { blockX, blockY, data } of blockUpdates) {
-			// Find the existing block
 			const rec = await db
 				.query("tileBlocks")
 				.withIndex("byTileSetAndPos", (q) =>
@@ -153,7 +147,6 @@ export const updateViewportTiles = mutation(
 				);
 			}
 
-			// Update the block with the pre-compressed data
 			await db.patch(rec._id, { data });
 			updatedBlocksCount++;
 		}
@@ -233,7 +226,6 @@ export const clearUserDataBatch = internalMutation({
 			.query("tileSets")
 			.withIndex("byOwner", (q) => q.eq("owner", userId))
 			.paginate({ cursor: cursor ?? null, numItems: 10 });
-		// Note: Convex functions run on server side, using console for logging
 		console.log("clearing user data batch", batch.page.length);
 
 		for (const tileSet of batch.page) {
@@ -313,7 +305,6 @@ export const clearUserData = mutation({
 			.query("users")
 			.withIndex("byExternalId", (q) => q.eq("externalId", me.subject))
 			.unique();
-		// Note: Convex functions run on server side, using console for logging
 		console.log("clearing user data", id);
 		if (!id) throw new Error("User record missing");
 

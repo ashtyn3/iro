@@ -21,10 +21,8 @@ export const Timed: Component<Timed, EventsBuilder> = (base, act) => {
 		e.engine.clockSystem.addEvent(event.id, event.time, () => {
 			const hasPathfinding = "seeking" in e || "seek" in e;
 			if (hasPathfinding) {
-				// This is a pathfinding entity, always execute
 				event.callback();
 			} else {
-				// Regular entity, only execute if in viewport
 				const hasViewport = "inViewport" in e || "inViewportWR" in e;
 				if (hasViewport) {
 					const inViewport =

@@ -45,7 +45,6 @@ export default function Menu() {
 		}
 	};
 
-	// Set up authentication once
 	onMount(() => {
 		if (convex) {
 			convex.setAuth(fetchToken, (auth) => {
@@ -54,7 +53,6 @@ export default function Menu() {
 		}
 	});
 
-	// Create query only when authenticated
 	const [tileSetsQuery, setTileSetsQuery] = createSignal<(() => any) | null>(
 		null,
 	);
@@ -86,7 +84,7 @@ export default function Menu() {
 	const handleNewGame = async () => {
 		if (!convex) return;
 		setCurrentState("loading");
-		// TODO: Implement new game logic
+
 		try {
 			const newEngine = new Engine(350, 350, convex);
 			setEngine(newEngine);
@@ -137,7 +135,7 @@ export default function Menu() {
 		setCurrentState("loading");
 		try {
 			const db = new DB(convex);
-			// TODO: Implement export functionality
+
 			setCurrentState("select");
 		} catch (error) {
 			Debug.getInstance().error(`Failed to export database: ${error}`);

@@ -79,8 +79,26 @@ fn dither(total_dist: f32, hi_dist: f32, dith_dist: f32, steps: u32, start: vec3
 }
 
 fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32>, tile_kind: u32, has_mask: u32, mask_kind: u32) -> vec3<f32> {
-    // If no lights, return the distance-based color
+    // If no lights, return the distance-based color unchanged
     if params.light_count == 0u {
+        return base_color;
+    }
+    
+    // Check if any light affects this tile
+    var has_light_influence = false;
+    for (var i = 0u; i < params.light_count; i = i + 1u) {
+        let light = light_sources[i];
+        let light_dx = world_x - light.x;
+        let light_dy = world_y - light.y;
+        let light_dist = sqrt(light_dx * light_dx + light_dy * light_dy);
+        if light_dist <= light.radius {
+            has_light_influence = true;
+            break;
+        }
+    }
+    
+    // If no lights affect this tile, return original distance-based color
+    if !has_light_influence {
         return base_color;
     }
     
@@ -94,7 +112,7 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
     var result_color = base_color;
     var max_light_influence = 0.0;
     
-    // Process each light source
+    // Process each light source that affects this tile
     for (var i = 0u; i < params.light_count; i = i + 1u) {
         let light = light_sources[i];
         let light_dx = world_x - light.x;
@@ -120,7 +138,7 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
             if light_dist <= inner_radius {
                 // Full bright color in inner radius (same as player's close range)
                 final_light_color = bright_color;
-            } else if light_dist <= light.radius {
+            } else {
                 // Apply dithering in outer radius (same as player's dither range)
                 final_light_color = dither(
                     light_dist,
@@ -130,8 +148,6 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
                     bright_color,   // Start with bright light color
                     base_color      // Dither to distance-based color
                 );
-            } else {
-                final_light_color = base_color;
             }
             
             // Use the strongest light influence

@@ -21,14 +21,14 @@ export type Vec2d = ReturnType<typeof Vec2d>;
 
 export function updateEntitiesMap(
 	currentEntities: immutable.Map<Vec2d, Entity>,
-	oldPosition: Vec2d, // Old key
-	newPosition: Vec2d, // New key
-	entity: Entity, // The entity itself (same instance)
+	oldPosition: Vec2d,
+	newPosition: Vec2d,
+	entity: Entity,
 ): immutable.Map<Vec2d, Entity> {
 	if (!oldPosition.equals(newPosition)) {
 		return currentEntities.delete(oldPosition).set(newPosition, entity);
 	}
-	// If only other properties changed (e.g., health), just ensure map holds the updated instance
+
 	return currentEntities.set(newPosition, entity);
 }
 

@@ -45,7 +45,6 @@ export class Engine {
 		this.height = h;
 		this.convex = convex;
 
-		// Initialize debug system
 		if (import.meta.env.DEV) {
 			this.debug = Debug.getInstance(this, { logLevel: "debug" });
 		} else {
@@ -57,7 +56,7 @@ export class Engine {
 
 		const TILES_X = VIEWPORT.x;
 		const TILES_Y = VIEWPORT.y;
-		const FONT_PX = 24; // Optimal size for MorePerfectDOSVGA - crisp and readable
+		const FONT_PX = 24;
 
 		this.display = new ROT.Display({
 			width: TILES_X,
@@ -104,14 +103,12 @@ export class Engine {
 	async renderDOM() {
 		const canvas = this.display.getContainer() as HTMLCanvasElement;
 
-		// Stretch to 90% of viewport width/height
 		canvas.style.width = "100%";
 		canvas.style.height = "100%";
 		canvas.style.imageRendering = "pixelated";
 		canvas.style.display = "block";
 		canvas.style.backgroundColor = "#000";
-		canvas.style.objectFit = "contain"; // Maintain aspect ratio
-		// document.body.style.overflow = "hidden";
+		canvas.style.objectFit = "contain";
 
 		this.engine.lock();
 		this.engine.start();
@@ -129,19 +126,23 @@ export class Engine {
 		let lastPos: Vec2d | null = null;
 		let lastTile: Tile | null = null;
 		document.getElementById("gamebox")?.addEventListener("mousemove", (e) => {
-			const pos = this.display.eventToPosition(e);
-			const posVec = Vec2d({ x: pos[0], y: pos[1] });
+			const viewportPos = this.display.eventToPosition(e);
+			const viewportVec = Vec2d({ x: viewportPos[0], y: viewportPos[1] });
 
-			// Reset the previous tile by restoring its original state
-			if (lastPos && lastTile && !lastPos.equals(posVec)) {
+			const worldVec = Vec2d({
+				x: this.viewport().x + viewportVec.x,
+				y: this.viewport().y + viewportVec.y,
+			});
+
+			if (lastPos && lastTile && !lastPos.equals(worldVec)) {
 				this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
 			}
 
 			if (
-				posVec.x < 0 ||
-				posVec.y < 0 ||
-				posVec.x >= this.width ||
-				posVec.y >= this.height
+				worldVec.x < 0 ||
+				worldVec.y < 0 ||
+				worldVec.x >= this.width ||
+				worldVec.y >= this.height
 			) {
 				lastTile = null;
 				lastPos = null;
@@ -149,16 +150,14 @@ export class Engine {
 			}
 
 			if (
-				(!lastPos || !lastPos.equals(posVec)) &&
-				this.mapBuilder.tiles[posVec.x][posVec.y].mask?.kind !==
+				(!lastPos || !lastPos.equals(worldVec)) &&
+				this.mapBuilder.tiles[worldVec.x][worldVec.y].mask?.kind !==
 					TileKinds.cursor
 			) {
-				// Store the current tile before modifying it
-				lastTile = { ...this.mapBuilder.tiles[posVec.x][posVec.y] };
+				lastTile = { ...this.mapBuilder.tiles[worldVec.x][worldVec.y] };
 			}
 
-			// Add cursor mask to current tile
-			this.mapBuilder.tiles[posVec.x][posVec.y].mask = {
+			this.mapBuilder.tiles[worldVec.x][worldVec.y].mask = {
 				fg: COLORS.cursor.close,
 				bg: "",
 				char: "X",
@@ -166,9 +165,9 @@ export class Engine {
 				promotable: { type: "cursor" },
 			};
 
-			lastPos = posVec;
+			lastPos = worldVec;
 			const viewDistance = this.mapBuilder.viewableDistance();
-			const distance = calcDistanceBtwVecs(posVec, this.player.position);
+			const distance = calcDistanceBtwVecs(worldVec, this.player.position);
 			if (distance < viewDistance) {
 				console.log("visible");
 			}

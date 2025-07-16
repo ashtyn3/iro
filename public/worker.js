@@ -1,4 +1,4 @@
-// cluster-worker.js
+
 const TileKinds = {
   grass: 0,
   water: 1,
@@ -57,7 +57,7 @@ self.onmessage = (event) => {
   try {
     const uf = new UnionFind(width * height);
 
-    // Phase 1: Union-Find
+    
     for (let x = startX; x < endX; x++) {
       const localX = x - startX;
       for (let y = 0; y < height; y++) {
@@ -69,10 +69,10 @@ self.onmessage = (event) => {
 
         const currentIndex = coordToIndex(x, y, height);
         const neighbors = [
-          { x: x - 1, y }, // Left
-          { x: x + 1, y }, // Right (optional but safe)
-          { x, y: y - 1 }, // Up
-          { x, y: y + 1 }, // Down (optional but safe)
+          		{ x: x - 1, y },
+		{ x: x + 1, y },
+		{ x, y: y - 1 },
+		{ x, y: y + 1 },
         ];
 
         for (const { x: nx, y: ny } of neighbors) {
@@ -99,7 +99,7 @@ self.onmessage = (event) => {
       }
     }
 
-    // Phase 2: Build clusters
+    
     const clusterMap = new Map();
 
     for (let x = startX; x < endX; x++) {

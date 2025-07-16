@@ -17,7 +17,7 @@ export const Movable: Component<Movable, Vec2d> = (base, init) => {
 		const newY = e.position.y + delta.y;
 
 		const oldPositionKey = e.position;
-		const newPositionKey = Vec2d({ x: newX, y: newY }); // Create new Immutable Vec2d Record for potential new key
+		const newPositionKey = Vec2d({ x: newX, y: newY });
 
 		if (
 			newY >= e.engine.height ||
@@ -38,7 +38,6 @@ export const Movable: Component<Movable, Vec2d> = (base, init) => {
 	return e;
 };
 
-// Set the name property for the component function
 Object.defineProperty(Movable, "name", {
 	value: "Movable",
 	writable: false,

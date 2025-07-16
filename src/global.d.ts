@@ -1,6 +1,5 @@
 /// <reference types="@solidjs/start/env" />
 
-// WebGPU types for browser support
 interface Navigator {
 	gpu?: {
 		requestAdapter(): Promise<GPUAdapter | null>;

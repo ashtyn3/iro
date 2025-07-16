@@ -46,7 +46,6 @@ export class GPURenderer {
 
 		for (const emitter of lightEmitters) {
 			const lightSource = emitter.getLightSource();
-			// Only include lights that might affect the viewport
 			const lightX = lightSource.x;
 			const lightY = lightSource.y;
 			const lightRadius = lightSource.radius;
@@ -54,27 +53,15 @@ export class GPURenderer {
 			const viewportRight = viewport.x + VIEWPORT.x;
 			const viewportBottom = viewport.y + VIEWPORT.y;
 
-			// Check if light could affect viewport area (including radius)
 			if (emitter.inViewportWR()) {
 				lights.push(lightSource);
 			}
-			// if (
-			// 	lightX + lightRadius >= viewport.x &&
-			// 	lightX - lightRadius <= viewportRight &&
-			// 	lightY + lightRadius >= viewport.y &&
-			// 	lightY - lightRadius <= viewportBottom
-			// ) {
-			// 	lights.push(lightSource);
-			// } else {
-			// 	Debug.getInstance().info(emitter.name, "not in viewport");
-			// }
 		}
 
 		return lights;
 	}
 
 	private createLightBuffer(lights: LightSource[]): GPUBuffer {
-		// Each light source: x, y, radius, color, intensity, neutral_percentage (6 floats, but color is u32 and neutral_percentage is float)
 		const lightData = new Float32Array(lights.length * 6);
 
 		for (let i = 0; i < lights.length; i++) {
@@ -83,20 +70,19 @@ export class GPURenderer {
 			lightData[offset] = light.x;
 			lightData[offset + 1] = light.y;
 			lightData[offset + 2] = light.radius;
-			// Color needs to be stored as u32 but we'll use a view to write it
 			lightData[offset + 4] = light.intensity;
-			lightData[offset + 5] = light.neutralPercentage; // Use the correct property name
+			lightData[offset + 5] = light.neutralPercentage;
 		}
 
 		// Create a uint32 view to write colors
 		const uint32View = new Uint32Array(lightData.buffer);
 		for (let i = 0; i < lights.length; i++) {
-			const colorIndex = i * 6 + 3; // 3rd element in each light (after x, y, radius)
+			const colorIndex = i * 6 + 3;
 			uint32View[colorIndex] = this.hexToInt(lights[i].color);
 		}
 
 		const buffer = this.device.createBuffer({
-			size: Math.max(lightData.byteLength, 20), // Minimum size for WebGPU binding
+			size: Math.max(lightData.byteLength, 24),
 			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 		});
 
@@ -111,9 +97,8 @@ export class GPURenderer {
 		const data = new Uint32Array(VIEWPORT.x * VIEWPORT.y * 10);
 
 		let i = 0;
-		const kindCounts: Record<number, number> = {}; // Debug
+		const kindCounts: Record<number, number> = {};
 
-		// Fixed: Correct loop order - sy first, then sx
 		for (let sy = 0; sy < VIEWPORT.y; sy++) {
 			for (let sx = 0; sx < VIEWPORT.x; sx++) {
 				const g_x = viewport.x + sx;
@@ -121,7 +106,6 @@ export class GPURenderer {
 				const tile = tiles[g_x]?.[g_y];
 
 				if (tile) {
-					// Debug: count tile kinds
 					kindCounts[tile.kind] = (kindCounts[tile.kind] || 0) + 1;
 
 					data[i++] = this.hexToInt(tile.fg);
@@ -135,19 +119,18 @@ export class GPURenderer {
 					data[i++] = tile.mask ? tile.mask.char.charCodeAt(0) : 0;
 					data[i++] = tile.mask ? tile.mask.kind : 0;
 				} else {
-					// Missing tile - fill with grass defaults
 					kindCounts[TileKinds.grass] = (kindCounts[TileKinds.grass] || 0) + 1;
 
-					data[i++] = this.hexToInt(COLORS.grass.close); // fg
-					data[i++] = 0; // bg
-					data[i++] = 46; // char '.'
-					data[i++] = 0; // boundary
-					data[i++] = TileKinds.grass; // kind
-					data[i++] = 0; // has_mask
-					data[i++] = 0; // mask_fg
-					data[i++] = 0; // mask_bg
-					data[i++] = 0; // mask_char
-					data[i++] = 0; // mask_kind
+					data[i++] = this.hexToInt(COLORS.grass.close);
+					data[i++] = 0;
+					data[i++] = 46;
+					data[i++] = 0;
+					data[i++] = TileKinds.grass;
+					data[i++] = 0;
+					data[i++] = 0;
+					data[i++] = 0;
+					data[i++] = 0;
+					data[i++] = 0;
 				}
 			}
 		}
@@ -161,21 +144,19 @@ export class GPURenderer {
 	}
 
 	private createColorBuffer(): GPUBuffer {
-		// Create array with exactly 10 entries (one for each TileKind including cursor)
 		const colorData = new Uint32Array(10 * 3);
 
-		// Map enum values to colors
 		const colorArray = [
-			COLORS.grass, // TileKinds.grass = 0
-			COLORS.water, // TileKinds.water = 1
-			COLORS.rock, // TileKinds.rock = 2
-			COLORS.copper, // TileKinds.copper = 3
-			COLORS.wood, // TileKinds.wood = 4
-			COLORS.leafs, // TileKinds.leafs = 5
-			COLORS.struct, // TileKinds.struct = 6
-			COLORS.tree, // TileKinds.tree = 7
-			COLORS.berry, // TileKinds.berry = 8
-			COLORS.cursor, // TileKinds.cursor = 9
+			COLORS.grass,
+			COLORS.water,
+			COLORS.rock,
+			COLORS.copper,
+			COLORS.wood,
+			COLORS.leafs,
+			COLORS.struct,
+			COLORS.tree,
+			COLORS.berry,
+			COLORS.cursor,
 		];
 
 		for (let kind = 0; kind < 10; kind++) {
@@ -207,20 +188,20 @@ export class GPURenderer {
 		const DITHER_RADIUS = GMap.DITHER_RADIUS;
 		const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
 
-		const paramsData = new ArrayBuffer(44); // Increased size for light_count
+		const paramsData = new ArrayBuffer(44);
 		const view = new DataView(paramsData);
 
 		view.setFloat32(0, params.playerX, true);
 		view.setFloat32(4, params.playerY, true);
 		view.setInt32(8, params.viewportX, true);
 		view.setInt32(12, params.viewportY, true);
-		view.setUint32(16, VIEWPORT.x, true); // viewport_width
-		view.setUint32(20, VIEWPORT.y, true); // viewport_height
+		view.setUint32(16, VIEWPORT.x, true);
+		view.setUint32(20, VIEWPORT.y, true);
 		view.setFloat32(24, params.viewRadius, true);
 		view.setFloat32(28, DITHER_RADIUS, true);
 		view.setFloat32(32, SUPER_FAR_RADIUS, true);
 		view.setUint32(36, STEPS, true);
-		view.setUint32(40, params.lightCount, true); // light_count
+		view.setUint32(40, params.lightCount, true);
 
 		const buffer = this.device.createBuffer({
 			size: paramsData.byteLength,
@@ -243,13 +224,10 @@ export class GPURenderer {
 			await this.init();
 		}
 
-		// Convert viewport to Vec2d format
 		const viewportVec2d = Vec2d(viewport);
 
-		// Collect light sources
 		const lights = this.collectLightSources(viewportVec2d);
 
-		// Create buffers
 		const tileBuffer = this.createTileBuffer(tiles, viewportVec2d);
 		const colorBuffer = this.createColorBuffer();
 		const lightBuffer = this.createLightBuffer(lights);

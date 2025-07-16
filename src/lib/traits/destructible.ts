@@ -19,8 +19,7 @@ export const Destructible: Component<
 	{ maxHealth: number; currentHealth: number }
 > = (base, { maxHealth, currentHealth }) => {
 	const e = base as Entity & Destructible & Syncable & Named;
-	// cast once to the widened type
-	// add your data & methods
+
 	e.maxHealth = maxHealth;
 	e.health = currentHealth;
 	e.dead = false;

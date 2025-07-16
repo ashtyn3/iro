@@ -2,7 +2,7 @@ import { decode, encode } from "@msgpack/msgpack";
 import type { Cluster, Clusters } from "../../src/lib/map";
 import type { Id } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
-import schema from "../schema"; // wherever your TS type lives
+import schema from "../schema";
 
 export const saveClusters = mutation(
 	async (
@@ -15,11 +15,9 @@ export const saveClusters = mutation(
 			clusters: Clusters;
 		},
 	) => {
-		// optional: enforce auth
 		const user = await auth.getUserIdentity();
 		if (!user) throw new Error("Not signed in");
 
-		// insert and return the generated id
 		Object.keys(clusters).forEach(async (k) => {
 			const group = clusters[k as unknown as keyof Clusters];
 			await db.insert("clusters", {
@@ -28,8 +26,6 @@ export const saveClusters = mutation(
 				data: encodeToArrayBuffer(group),
 			});
 		});
-
-		// return id;
 	},
 );
 
@@ -72,7 +68,7 @@ export const updateClusters = mutation(
 	): Promise<void> => {
 		const user = await auth.getUserIdentity();
 		if (!user) throw new Error("Not signed in");
-		// Note: Convex functions run on server side, using console for logging
+
 		console.log(tileSetId);
 
 		const existing = await db
@@ -95,7 +91,6 @@ export const updateClusters = mutation(
 				});
 				existingByKind.delete(kind);
 			} else {
-				// new insert
 				await db.insert("clusters", {
 					tileSetId: tileSetId as Id<"tileSets">,
 					data: dataStr,

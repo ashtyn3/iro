@@ -106,7 +106,6 @@ export interface Tile {
 }
 
 export class GMap {
-	// Distance constants for rendering
 	public static readonly VIEW_RADIUS_BASE = 10;
 	public static readonly DITHER_RADIUS = 10;
 	public static readonly SUPER_FAR_RADIUS = 20;
@@ -173,33 +172,7 @@ export class GMap {
 			height: VIEWPORT.y,
 		};
 	}
-	// async updateViewportTiles(newTiles: Tile[][]): Promise<void> {
-	//     const viewport = this.getViewport();
-	//
-	//     // Validate dimensions
-	//     if (newTiles.length !== viewport.width ||
-	//         newTiles.some(row => row.length !== viewport.height)) {
-	//         throw new Error("New tiles dimensions don't match viewport");
-	//     }
-	//
-	//     // Update local tiles array
-	//     for (let vx = 0; vx < viewport.width; vx++) {
-	//         for (let vy = 0; vy < viewport.height; vy++) {
-	//             const worldX = viewport.x + vx;
-	//             const worldY = viewport.y + vy;
-	//
-	//             if (worldX < this.width && worldY < this.height) {
-	//                 this.tiles[worldX][worldY] = newTiles[vx][vy];
-	//             }
-	//         }
-	//     }
-	//
-	//     // Update database if tiles were loaded from DB
-	//     if (this.mapId) {
-	//         const db = new DB(this.convex);
-	//         await db.updateVisibleTiles(this.mapId, viewport, newTiles);
-	//     }
-	// }
+
 	async updateViewportTile(
 		viewportX: number,
 		viewportY: number,
@@ -213,15 +186,11 @@ export class GMap {
 			throw new Error("Tile position outside world bounds");
 		}
 
-		// Update local array
 		this.tiles[worldX][worldY] = newTile;
 
-		// Always queue updates to prevent race conditions and ensure sequential processing
 		if (this.mapId) {
-			// Add to queue regardless of saved state
 			this.writeQueue.push({ x: viewportX, y: viewportY, tile: newTile });
 
-			// Limit queue size to prevent memory issues
 			if (this.writeQueue.length >= 1000) {
 				this.engine.debug.info("Write queue full, flushing early");
 				await this.flushWriteQueue();
@@ -412,27 +381,23 @@ export class GMap {
 					const bNoise = noise4(x * copperFreq, y * copperFreq);
 					tile.fg = COLORS.grass.close;
 					tile.char = ".";
-					if (
-						y - 1 > 0 &&
-						tNoise > treeThreshold &&
-						this.tiles[x][y - 1].mask == null
-					) {
+					if (y - 1 > 0 && tNoise > treeThreshold) {
 						tile.promotable = { type: "destructable,collectable", health: 15 };
 						tile.mask = {
 							fg: COLORS.wood.close,
 							bg: "",
-							char: "▲",
+							char: "♣",
 							kind: TileKinds.wood,
 							promotable: tile.promotable,
 						};
-						this.tiles[x][y - 1].promotable = tile.promotable;
-						this.tiles[x][y - 1].mask = {
-							fg: COLORS.leafs.close,
-							bg: "",
-							char: "^",
-							kind: TileKinds.leafs,
-							promotable: tile.promotable,
-						};
+						// this.tiles[x][y - 1].promotable = tile.promotable;
+						// this.tiles[x][y - 1].mask = {
+						// 	fg: COLORS.leafs.close,
+						// 	bg: "",
+						// 	char: "^",
+						// 	kind: TileKinds.leafs,
+						// 	promotable: tile.promotable,
+						// };
 					} else if (bNoise > 0.85) {
 						tile.promotable = { type: "destructable,collectable", health: 15 };
 						tile.mask = {
@@ -690,8 +655,25 @@ export class GMap {
 		baseColor: string,
 		lights: LightSource[],
 	): string {
-		// If no lights, return the distance-based color
+		// If no lights, return the distance-based color unchanged
 		if (lights.length === 0) {
+			return baseColor;
+		}
+
+		// Check if any light affects this tile
+		let hasLightInfluence = false;
+		for (const light of lights) {
+			const lightDx = worldX - light.x;
+			const lightDy = worldY - light.y;
+			const lightDist = Math.sqrt(lightDx * lightDx + lightDy * lightDy);
+			if (lightDist <= light.radius) {
+				hasLightInfluence = true;
+				break;
+			}
+		}
+
+		// If no lights affect this tile, return original distance-based color
+		if (!hasLightInfluence) {
 			return baseColor;
 		}
 
@@ -707,7 +689,7 @@ export class GMap {
 		let resultColor = baseColor;
 		let maxLightInfluence = 0;
 
-		// Process each light source
+		// Process each light source that affects this tile
 		for (const light of lights) {
 			const lightDx = worldX - light.x;
 			const lightDy = worldY - light.y;
@@ -737,7 +719,7 @@ export class GMap {
 				if (lightDist <= innerRadius) {
 					// Full bright color in inner radius (same as player's close range)
 					lightColor = brightColor;
-				} else if (lightDist <= light.radius) {
+				} else {
 					// Apply dithering in outer radius (same as player's dither range)
 					lightColor = this.dither(
 						lightDist,
@@ -747,8 +729,6 @@ export class GMap {
 						brightColor, // Start with bright light color
 						baseColor, // Dither to distance-based color
 					);
-				} else {
-					lightColor = baseColor;
 				}
 
 				// Use the strongest light influence

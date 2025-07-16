@@ -10,7 +10,6 @@ export interface Syncable {
 	ready: () => boolean;
 }
 
-// Global update queue for batching updates
 class UpdateQueue {
 	private static instance: UpdateQueue;
 	private queue: Map<Entity, { props: Partial<any>; setStore: Function }> =
@@ -26,7 +25,6 @@ class UpdateQueue {
 	}
 
 	enqueue(entity: Entity, props: Partial<any>, setStore: Function) {
-		// Merge with existing queued updates for this entity
 		const existing = this.queue.get(entity);
 		if (existing) {
 			this.queue.set(entity, {
@@ -37,10 +35,8 @@ class UpdateQueue {
 			this.queue.set(entity, { props, setStore });
 		}
 
-		// Schedule processing if not already scheduled
 		if (!this.scheduled) {
 			this.scheduled = true;
-			// Use microtask to batch updates within the same tick
 			queueMicrotask(() => this.process());
 		}
 	}
@@ -53,19 +49,16 @@ class UpdateQueue {
 
 		this.processing = true;
 
-		// Process all queued updates
 		for (const [entity, { props, setStore }] of this.queue.entries()) {
 			this.applyUpdate(entity, props, setStore);
 		}
 
-		// Clear the queue
 		this.queue.clear();
 		this.processing = false;
 		this.scheduled = false;
 	}
 
 	private applyUpdate(entity: Entity, props: Partial<any>, setStore: Function) {
-		// Apply store updates
 		setStore(
 			produce((current: any) => {
 				for (const [key, value] of Object.entries(props)) {
@@ -82,23 +75,19 @@ class UpdateQueue {
 			}),
 		);
 
-		// Apply updates directly to the entity
 		Object.assign(entity, props);
 
-		// Trigger store callback if available
 		if ((entity as any).store) {
 			(entity as any).store();
 		}
 	}
 
-	// Force immediate processing (useful for critical updates)
 	flush() {
 		if (this.queue.size > 0) {
 			this.process();
 		}
 	}
 
-	// Get queue size for debugging
 	get size() {
 		return this.queue.size;
 	}
@@ -112,19 +101,16 @@ export const Syncable: Component<Syncable, string> = (base, init) => {
 	const [entityStore, setEntityStore] = createStore<typeof base>(initialState);
 
 	e.value = () => {
-		// Return the store as a reactive value
 		return entityStore;
 	};
 
 	e.syncable = true;
 
 	e.update = (props) => {
-		// Queue both store and entity updates for batching
 		UpdateQueue.getInstance().enqueue(e, props, setEntityStore);
 	};
 
 	return e;
 };
 
-// Export the queue for external access
 export const updateQueue = UpdateQueue.getInstance();

@@ -44,24 +44,23 @@ export function box(
 ) {
 	const parts: Entity[] = [];
 
-	const x0 = tl_pos.x - 1; // left border
-	const x1 = tl_pos.x + size.x; // right border
-	const y0 = tl_pos.y - 1; // top border
-	const y1 = tl_pos.y + size.y; // bottom border
+	const x0 = tl_pos.x - 1;
+	const x1 = tl_pos.x + size.x;
+	const y0 = tl_pos.y - 1;
+	const y1 = tl_pos.y + size.y;
 
-	// 1) Corners
 	parts.push(new Entity(e, { x: x0, y: y0 }, "┌"));
 	parts.push(new Entity(e, { x: x1, y: y0 }, "┐"));
 	parts.push(new Entity(e, { x: x0, y: y1 }, "└"));
 	parts.push(new Entity(e, { x: x1, y: y1 }, "┘"));
 
-	// 2) Top & bottom edges (interior width)
+
 	for (let dx = 0; dx < size.x; dx++) {
 		parts.push(new Entity(e, { x: tl_pos.x + dx, y: y0 }, border.h));
 		parts.push(new Entity(e, { x: tl_pos.x + dx, y: y1 }, border.h));
 	}
 
-	// 3) Left & right edges (interior height)
+
 	for (let dy = 0; dy < size.y; dy++) {
 		parts.push(new Entity(e, { x: x0, y: tl_pos.y + dy }, border.v));
 		parts.push(new Entity(e, { x: x1, y: tl_pos.y + dy }, border.v));
