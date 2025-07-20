@@ -1,0 +1,48 @@
+{
+  "prefixes": [
+    "Void", "Shad", "Cryst", "Emb", "Frost", "Storm", "Star", "Lun",
+    "Sol", "Sang", "Oss", "Anim", "Spir", "Onir", "Nyx", "Chao",
+    "Ord", "Div", "Inf", "Cel", "Aby", "Eth", "Astr", "Phant",
+    "Wraith", "Spect", "Eldr", "Arc", "Myst", "Prim", "Anc", "Obsc",
+    "Forb", "Mal", "Ben", "Sacr", "Prof", "Temp", "Etern", "Infin",
+    "Quant", "Dim", "Plan", "Cosm", "Elem", "Primord", "Drac", "Fey",
+    "Dem", "Angel", "Necr", "Pyr", "Cry", "Electr", "Hydr", "Ge",
+    "Aer", "Lumin", "Umbr", "Chron", "Psych", "Bi", "Techn", "Nan",
+    "Macr", "Meg", "Ultr", "Hyp", "Sup", "Met", "Prot", "Ne",
+    "Pseud", "Quas", "Trans", "Int", "Extr", "Mult", "Omn", "Pan",
+    "Poly", "Mon", "Tri", "Hex", "Oct", "Dec", "Kil", "Gig",
+    "Ter", "Pet", "Ex", "Zett", "Yott", "Alph", "Bet", "Gamm",
+    "Delt", "Omeg", "Sigm", "Thet", "Lamb", "Crim", "Azur", "Viol",
+    "Aur", "Arg", "Obsid", "Pearl", "Jad", "Flux", "Vort", "Zen"
+  ],
+  "middles": [
+    "a", "e", "i", "o", "u", "y", "ae", "ei", "ou", "ia", "eo", "au",
+    "flam", "frost", "storm", "mist", "vap", "ess", "elix", "ser",
+    "plasm", "eth", "ich", "vit", "man", "flux", "ven", "tox",
+    "nect", "ambr", "merc", "sulf", "brim", "ash", "dust", "powd",
+    "cryst", "shard", "frag", "part", "mol", "atom", "quark", "phot",
+    "electr", "neutr", "prot", "ion", "isot", "catal", "reag", "solv",
+    "solut", "susp", "emuls", "gel", "foam", "aer", "coll", "mixt",
+    "comp", "elem", "alloy", "amalg", "tinct", "extr", "distill", "conc",
+    "dilut", "satur", "precip", "cryst", "sublim", "evap", "cond", "phas",
+    "stat", "form", "struct", "matr", "latt", "netw", "chain", "ring",
+    "spir", "hel", "strand", "fib", "thread", "wir", "membr", "barr",
+    "filt", "screen", "mesh", "web", "net", "trap", "void", "vacu",
+    "spac", "dimens", "realm", "plan", "spher", "zon", "field", "forc"
+  ],
+  "finals": [
+    "ol", "ene", "ide", "ine", "ate", "ox", "sol", "fluid", "ium", "ite",
+    "ane", "yne", "al", "flux", "serum", "elixir", "essence", "ichor", "vitae",
+    "mana", "ether", "plasma", "vapor", "mist", "dew", "tears", "blood", "sap",
+    "nectar", "venom", "toxin", "poison", "cure", "balm", "salve", "tonic",
+    "brew", "potion", "draught", "philter", "tincture", "extract", "distillate",
+    "gel", "foam", "aerosol", "crystal", "shard", "fragment", "dust", "powder",
+    "ash", "residue", "sediment", "catalyst", "reagent", "solvent", "acid", "base",
+    "salt", "oxide", "sulfide", "chloride", "fluoride", "bromide", "iodide",
+    "nitride", "carbide", "hydride", "peroxide", "hydroxide", "sulfate", "nitrate",
+    "phosphate", "carbonate", "silicate", "aluminate", "chromate", "bane", "ward",
+    "shield", "guard", "blessing", "curse", "hex", "charm", "spell", "magic",
+    "power", "force", "energy", "aura", "glow", "radiance", "lux", "nox", "vis",
+    "mor", "vita", "mort", "lum", "umbra", "ignis", "aqua", "terra", "ventus"
+  ]
+}

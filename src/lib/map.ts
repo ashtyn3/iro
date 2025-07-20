@@ -3,6 +3,10 @@ import { createNoise2D } from "simplex-noise";
 import { createSignal } from "solid-js";
 import { api } from "~/convex/_generated/api";
 import { EntityRegistry } from "./entity";
+import {
+	generateMaterialInventory,
+	type Material,
+} from "./generators/material_gen";
 import { GPURenderer } from "./gpu";
 import type { Engine } from "./index";
 import { DB, Vec2d } from "./state";
@@ -124,6 +128,7 @@ export class GMap {
 	saved: boolean;
 	writeQueue: { x: number; y: number; tile: Tile }[];
 	clusterQueue: { operation: "remove"; cluster: Cluster }[] = [];
+	materials: Material[];
 	private queueFlushTimer: number | null = null;
 	private _isFlushingQueue = createSignal(false);
 	public get isFlushingQueue() {
@@ -161,6 +166,7 @@ export class GMap {
 		this.saved = false;
 		this.writeQueue = [];
 		this.clusterQueue = [];
+		this.materials = [];
 	}
 
 	getViewport(): { x: number; y: number; width: number; height: number } {
@@ -319,7 +325,7 @@ export class GMap {
 		const noise2 = createNoise2D(Math.random);
 		const noise3 = createNoise2D(Math.random);
 		const noise4 = createNoise2D(Math.random);
-
+		this.materials = generateMaterialInventory(this.mapId, 10);
 		const copperFreq = 0.2;
 		const copperThreshold = 0.65;
 		const treeFreq = 0.25;
