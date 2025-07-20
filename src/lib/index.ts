@@ -173,7 +173,16 @@ export class Engine {
 			}
 		});
 
-		window.onbeforeunload = () => confirm("Confirm refresh");
+		window.onbeforeunload = () => {
+			if (this.clockSystem.state === "paused") {
+				return;
+			} else {
+				confirm("Confirm refresh");
+			}
+		};
+		document.documentElement.requestFullscreen({
+			navigationUI: "hide",
+		});
 
 		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
 		const d = DarkThing(this, Vec2d({ x: 10, y: 13 }));
