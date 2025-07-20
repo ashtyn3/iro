@@ -4,7 +4,23 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
 	vite: {
-		plugins: [tailwindcss()],
+		plugins: [
+			tailwindcss(),
+			VitePWA({
+				registerType: "autoUpdate",
+				injectRegister: "inline",
+				workbox: {
+					maximumFileSizeToCacheInBytes: 10000000,
+					globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+				},
+				manifest: {
+					name: "Iro",
+					short_name: "Iro",
+					description: "Factory",
+					theme_color: "#000000",
+				},
+			}),
+		],
 	},
 	server: {
 		esbuild: {
