@@ -3,12 +3,12 @@ struct TileData {
     bg_color: u32,
     char: u32,
     boundary: u32,
-    kind: u32,
+    color_index: u32,  // Color buffer index (not tile kind)
     has_mask: u32,
     mask_fg: u32,
     mask_bg: u32,
     mask_char: u32,
-    mask_kind: u32,
+    mask_color_index: u32,  // Mask color buffer index (not mask tile kind)
 }
 
 struct ColorData {
@@ -78,7 +78,7 @@ fn dither(total_dist: f32, hi_dist: f32, dith_dist: f32, steps: u32, start: vec3
     return interpolate_color(start_interp, end_interp, factor * f32(steps) - f32(step));
 }
 
-fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32>, tile_kind: u32, has_mask: u32, mask_kind: u32) -> vec3<f32> {
+fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32>, tile_color_index: u32, has_mask: u32, mask_color_index: u32) -> vec3<f32> {
     // If no lights, return the distance-based color unchanged
     if params.light_count == 0u {
         return base_color;
@@ -102,12 +102,12 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
         return base_color;
     }
     
-    // Get the tile's bright "close" color
-    var kind_to_use = tile_kind;
+    // Get the tile's bright "close" color using the color index
+    var color_index_to_use = tile_color_index;
     if has_mask != 0u {
-        kind_to_use = mask_kind;
+        color_index_to_use = mask_color_index;
     }
-    let tile_close_color = hex_to_rgb(colors[kind_to_use].close);
+    let tile_close_color = hex_to_rgb(colors[color_index_to_use].close);
 
     var result_color = base_color;
     var max_light_influence = 0.0;
@@ -188,17 +188,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let dy = wy - params.player_y;
     let dist = sqrt(dx * dx + dy * dy);
 
-    var color_kind = tile.kind;
+    var color_index = tile.color_index;
     if tile.has_mask != 0u {
-        color_kind = tile.mask_kind;
-    }
-    
-    // Ensure color_kind is within bounds
-    if color_kind >= 10u {
-        color_kind = 0u;
+        color_index = tile.mask_color_index;
     }
 
-    let cols = colors[color_kind];
+    let cols = colors[color_index];
     let close_color = hex_to_rgb(cols.close);
     let far_color = hex_to_rgb(cols.far);
     let super_far_color = hex_to_rgb(cols.super_far);
@@ -217,7 +212,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     
     // Apply light contributions
-    fg_rgb = calculate_light_contribution(wx, wy, fg_rgb, tile.kind, tile.has_mask, tile.mask_kind);
+    fg_rgb = calculate_light_contribution(wx, wy, fg_rgb, color_index, tile.has_mask, tile.mask_color_index);
 
     var char_to_use = tile.char;
     var bg_to_use = tile.bg_color;

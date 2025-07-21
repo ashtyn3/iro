@@ -7,7 +7,8 @@ import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
 import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
 import { KeyHandles, keyMap } from "./keyhandle";
-import { COLORS, GMap, type Tile, TileKinds, VIEWPORT } from "./map";
+import { GMap, type Tile, TileKinds, VIEWPORT } from "./map";
+import { COLORS } from "./material";
 import { Fire } from "./objects/fire";
 import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
@@ -134,19 +135,22 @@ export class Engine {
 				y: this.viewport().y + viewportVec.y,
 			});
 
-			if (lastPos && lastTile && !lastPos.equals(worldVec)) {
-				this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
-			}
-
 			if (
 				worldVec.x < 0 ||
 				worldVec.y < 0 ||
 				worldVec.x >= this.width ||
 				worldVec.y >= this.height
 			) {
+				if (lastPos && lastTile) {
+					this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
+				}
 				lastTile = null;
 				lastPos = null;
 				return;
+			}
+
+			if (lastPos && lastTile && !lastPos.equals(worldVec)) {
+				this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
 			}
 
 			if (
@@ -158,7 +162,7 @@ export class Engine {
 			}
 
 			this.mapBuilder.tiles[worldVec.x][worldVec.y].mask = {
-				fg: COLORS.cursor.close,
+				fg: COLORS.colors().cursor.close,
 				bg: "",
 				char: "X",
 				kind: TileKinds.cursor,
@@ -169,7 +173,7 @@ export class Engine {
 			const viewDistance = this.mapBuilder.viewableDistance();
 			const distance = calcDistanceBtwVecs(worldVec, this.player.position);
 			if (distance < viewDistance) {
-				console.log("visible");
+				return;
 			}
 		});
 

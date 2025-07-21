@@ -51,6 +51,9 @@ export default function Docs() {
 									<div>
 										<span class="text-yellow-600">#</span> - Copper
 									</div>
+									<div>
+										<span class="text-orange-500">●</span> - Ore deposits
+									</div>
 								</div>
 							</div>
 						</div>

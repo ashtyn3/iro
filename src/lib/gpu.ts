@@ -1,6 +1,7 @@
+import { COLORS, MaterialRegistry } from "~/lib/material";
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
-import { COLORS, GMap, type Tile, TileKinds, VIEWPORT } from "./map";
+import { GMap, type Tile, TileKinds, VIEWPORT } from "./map";
 import shader from "./shaders.wgsl?raw";
 import { Vec2d } from "./state";
 import { LightEmitter, type LightSource, Movable, Named } from "./traits";
@@ -10,12 +11,24 @@ export class GPURenderer {
 	private pipeline!: GPUComputePipeline;
 	private initialized = false;
 
+	// Map from color key (kind name or oreName) to color buffer index
+	private colorKeyToIndex: Record<string, number> = {};
+
+	// Cache the color buffer to avoid recreating it every frame
+	private cachedColorBuffer: GPUBuffer | null = null;
+	private colorCacheKey: string = "";
+	private cachedDevice: GPUDevice | null = null;
+	private needsColorCacheRefresh: boolean = false;
+
 	async init() {
 		if (!navigator.gpu) {
 			throw new Error("No webGPU");
 		}
 		const adapter = await navigator.gpu.requestAdapter();
 		if (!adapter) throw new Error("no adapter");
+
+		// Clear cached buffers when device changes
+		this.cleanup();
 
 		this.device = await adapter?.requestDevice();
 		const module = this.device.createShaderModule({
@@ -108,24 +121,50 @@ export class GPURenderer {
 				if (tile) {
 					kindCounts[tile.kind] = (kindCounts[tile.kind] || 0) + 1;
 
+					// Determine color index for main tile
+					let colorIndex = 0;
+					if (
+						tile.kind === TileKinds.ore &&
+						tile.oreName &&
+						this.colorKeyToIndex[tile.oreName] !== undefined
+					) {
+						colorIndex = this.colorKeyToIndex[tile.oreName];
+					} else if (tile.kind === TileKinds.ore && tile.oreName) {
+						// Fallback to default ore color if oreName not found
+						colorIndex = this.colorKeyToIndex["ore"] ?? 0;
+					} else {
+						const kindName = TileKinds[tile.kind] as string;
+						colorIndex = this.colorKeyToIndex[kindName as string] ?? 0;
+						if (colorIndex === 0 && kindName !== "grass") {
+						}
+					}
+					let maskColorIndex = 0;
+					if (tile.mask) {
+						const maskKindName = TileKinds[tile.mask.kind] as string;
+						maskColorIndex = this.colorKeyToIndex[maskKindName as string] ?? 0;
+					}
+
 					data[i++] = this.hexToInt(tile.fg);
 					data[i++] = this.hexToInt(tile.bg);
 					data[i++] = tile.char.charCodeAt(0);
 					data[i++] = tile.boundary ? 1 : 0;
-					data[i++] = tile.kind;
+					data[i++] = colorIndex; // Use color index instead of kind
 					data[i++] = tile.mask ? 1 : 0;
 					data[i++] = tile.mask ? this.hexToInt(tile.mask.fg) : 0;
 					data[i++] = tile.mask ? this.hexToInt(tile.mask.bg) : 0;
 					data[i++] = tile.mask ? tile.mask.char.charCodeAt(0) : 0;
-					data[i++] = tile.mask ? tile.mask.kind : 0;
+					data[i++] = tile.mask ? maskColorIndex : 0; // Use mask color index
 				} else {
 					kindCounts[TileKinds.grass] = (kindCounts[TileKinds.grass] || 0) + 1;
 
-					data[i++] = this.hexToInt(COLORS.grass.close);
+					const fallbackIndex = this.colorKeyToIndex["grass"] ?? 0;
+					data[i++] = this.hexToInt(
+						MaterialRegistry.instance.colors().grass.close,
+					);
 					data[i++] = 0;
 					data[i++] = 46;
 					data[i++] = 0;
-					data[i++] = TileKinds.grass;
+					data[i++] = fallbackIndex;
 					data[i++] = 0;
 					data[i++] = 0;
 					data[i++] = 0;
@@ -144,36 +183,71 @@ export class GPURenderer {
 	}
 
 	private createColorBuffer(): GPUBuffer {
-		const colorData = new Uint32Array(10 * 3);
+		// Create a cache key based on the current colors
+		const colors = MaterialRegistry.instance.colors();
+		const cacheKey = JSON.stringify(colors);
 
-		const colorArray = [
-			COLORS.grass,
-			COLORS.water,
-			COLORS.rock,
-			COLORS.copper,
-			COLORS.wood,
-			COLORS.leafs,
-			COLORS.struct,
-			COLORS.tree,
-			COLORS.berry,
-			COLORS.cursor,
-		];
-
-		for (let kind = 0; kind < 10; kind++) {
-			const colors = colorArray[kind];
-			const index = kind * 3;
-			colorData[index] = this.hexToInt(colors.close);
-			colorData[index + 1] = this.hexToInt(colors.far);
-			colorData[index + 2] = this.hexToInt(colors.superFar);
+		// Return cached buffer if colors haven't changed and device hasn't changed
+		if (
+			this.cachedColorBuffer &&
+			this.colorCacheKey === cacheKey &&
+			this.cachedDevice === this.device
+		) {
+			return this.cachedColorBuffer;
 		}
 
+		// Colors have changed, create new buffer
+		// Destroy old buffer if it exists
+		if (this.cachedColorBuffer) {
+			this.cachedColorBuffer.destroy();
+		}
+
+		// Dynamically build color array from COLORS object
+		const colorEntries = Object.entries(colors);
+		const colorData = new Uint32Array(colorEntries.length * 3);
+		this.colorKeyToIndex = {};
+		for (let i = 0; i < colorEntries.length; i++) {
+			const key = colorEntries[i][0];
+			const colorValues = colorEntries[i][1];
+			const index = i * 3;
+			colorData[index] = this.hexToInt(colorValues.close);
+			colorData[index + 1] = this.hexToInt(colorValues.far);
+			colorData[index + 2] = this.hexToInt(colorValues.superFar);
+			this.colorKeyToIndex[key] = i;
+		}
 		const buffer = this.device.createBuffer({
 			size: colorData.byteLength,
 			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 		});
 
 		this.device.queue.writeBuffer(buffer, 0, colorData);
+
+		// Cache the buffer, key, and device
+		this.cachedColorBuffer = buffer;
+		this.colorCacheKey = cacheKey;
+		this.cachedDevice = this.device;
+
 		return buffer;
+	}
+
+	// Clean up cached resources
+	cleanup() {
+		if (this.cachedColorBuffer) {
+			this.cachedColorBuffer.destroy();
+			this.cachedColorBuffer = null;
+			this.colorCacheKey = "";
+			this.cachedDevice = null;
+		}
+	}
+
+	// Invalidate color cache (called when materials are registered)
+	invalidateColorCache() {
+		console.log("🗑️ Invalidating GPU color cache due to material changes");
+		if (this.cachedColorBuffer) {
+			this.cachedColorBuffer.destroy();
+			this.cachedColorBuffer = null;
+			this.colorCacheKey = "";
+		}
 	}
 
 	private createParamsBuffer(params: {
@@ -228,8 +302,11 @@ export class GPURenderer {
 
 		const lights = this.collectLightSources(viewportVec2d);
 
-		const tileBuffer = this.createTileBuffer(tiles, viewportVec2d);
+		// Create color buffer FIRST to populate colorKeyToIndex mapping
 		const colorBuffer = this.createColorBuffer();
+
+		// Now create tile buffer with proper colorKeyToIndex populated
+		const tileBuffer = this.createTileBuffer(tiles, viewportVec2d);
 		const lightBuffer = this.createLightBuffer(lights);
 		const paramsBuffer = this.createParamsBuffer({
 			playerX: playerPos.x,
@@ -311,7 +388,7 @@ export class GPURenderer {
 		stagingBuffer.unmap();
 
 		tileBuffer.destroy();
-		colorBuffer.destroy();
+		// Don't destroy colorBuffer - it's cached for reuse
 		lightBuffer.destroy();
 		paramsBuffer.destroy();
 		outputBuffer.destroy();

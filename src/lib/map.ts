@@ -1,69 +1,23 @@
 import type { ConvexClient } from "convex/browser";
+import { Set as ImmutableSet } from "immutable";
+import seedrandom from "seedrandom";
 import { createNoise2D } from "simplex-noise";
-import { createSignal } from "solid-js";
+import { createSignal, from } from "solid-js";
 import { api } from "~/convex/_generated/api";
+import { MaterialRegistry } from "~/lib/material";
 import { EntityRegistry } from "./entity";
 import {
 	generateMaterialInventory,
 	type Material,
+	makeMaterial,
 } from "./generators/material_gen";
 import { GPURenderer } from "./gpu";
 import type { Engine } from "./index";
 import { DB, Vec2d } from "./state";
 import { LightEmitter, type LightSource, Movable } from "./traits";
 
-export const COLORS = {
-	grass: {
-		close: "#5C8A34",
-		far: "#0F1A0B",
-		superFar: "#050805",
-	},
-	water: {
-		close: "#3A6EA5",
-		far: "#0A111B",
-		superFar: "#05080D",
-	},
-	rock: {
-		close: "#7D7D7D",
-		far: "#111111",
-		superFar: "#050505",
-	},
-	copper: {
-		close: "#8C5A2B",
-		far: "#120B05",
-		superFar: "#070402",
-	},
-	wood: {
-		close: "#A67C52",
-		far: "#1A1008",
-		superFar: "#080503",
-	},
-	leafs: {
-		close: "#4F7C45",
-		far: "#0A0F08",
-		superFar: "#030503",
-	},
-	struct: {
-		close: "#7D7D7D",
-		far: "#111111",
-		superFar: "#050505",
-	},
-	tree: {
-		close: "#4F7C45",
-		far: "#0A0F08",
-		superFar: "#030503",
-	},
-	berry: {
-		close: "#C53030",
-		far: "#661818",
-		superFar: "#1F0808",
-	},
-	cursor: {
-		close: "#FFFF00",
-		far: "#B3B300",
-		superFar: "#666600",
-	},
-};
+const COLORS = () => MaterialRegistry.instance.colors();
+
 export enum TileKinds {
 	grass,
 	water,
@@ -75,14 +29,17 @@ export enum TileKinds {
 	tree,
 	berry,
 	cursor,
+	ore,
 }
 
 export const VIEWPORT: Vec2d = Vec2d({ x: 80, y: 40 });
+export const CELL_SIZE = 80;
+export const CELL_AREA_KM2 = (CELL_SIZE / 1000) ** 2;
 
 export type Cluster = {
 	kind: TileKinds;
 	points: Vec2d[];
-	center: Vec2d;
+	center: { x: number; y: number };
 };
 
 export type Clusters = {
@@ -107,6 +64,7 @@ export interface Tile {
 		promotable: promotion;
 	} | null;
 	promotable?: promotion;
+	oreName?: string; // For dynamic ore color lookup
 }
 
 export class GMap {
@@ -129,6 +87,7 @@ export class GMap {
 	writeQueue: { x: number; y: number; tile: Tile }[];
 	clusterQueue: { operation: "remove"; cluster: Cluster }[] = [];
 	materials: Material[];
+	mapAreaKm2: number;
 	private queueFlushTimer: number | null = null;
 	private _isFlushingQueue = createSignal(false);
 	public get isFlushingQueue() {
@@ -161,12 +120,14 @@ export class GMap {
 			[TileKinds.struct]: [],
 			[TileKinds.tree]: [],
 			[TileKinds.berry]: [],
+			[TileKinds.ore]: [],
 		};
 		this.map = [];
 		this.saved = false;
 		this.writeQueue = [];
 		this.clusterQueue = [];
 		this.materials = [];
+		this.mapAreaKm2 = w * h * CELL_AREA_KM2;
 	}
 
 	getViewport(): { x: number; y: number; width: number; height: number } {
@@ -321,11 +282,15 @@ export class GMap {
 		if (!canMakeMap.state) {
 			return { state: false, message: canMakeMap.message };
 		}
-		const noise1 = createNoise2D(Math.random);
-		const noise2 = createNoise2D(Math.random);
-		const noise3 = createNoise2D(Math.random);
-		const noise4 = createNoise2D(Math.random);
-		this.materials = generateMaterialInventory(this.mapId, 10);
+		// Only generate ore materials for now
+		this.materials = [];
+		for (let i = 0; i < 10; i++) {
+			this.materials.push(makeMaterial(`${this.mapId}-ore-${i}`, "ore"));
+		}
+		if (!Array.isArray(this.materials)) {
+			throw new Error("generateMaterialInventory did not return an array");
+		}
+		MaterialRegistry.instance.registerMaterials(this.materials);
 		const copperFreq = 0.2;
 		const copperThreshold = 0.65;
 		const treeFreq = 0.25;
@@ -334,6 +299,11 @@ export class GMap {
 		this.map = Array.from({ length: this.width }, () =>
 			Array(this.height).fill(0),
 		);
+
+		const noise1 = createNoise2D(Math.random);
+		const noise2 = createNoise2D(Math.random);
+		const noise3 = createNoise2D(Math.random);
+		const noise4 = createNoise2D(Math.random);
 
 		const freq1 = 0.015,
 			freq2 = 0.035,
@@ -347,6 +317,7 @@ export class GMap {
 				this.map[x][y] = elevation;
 			}
 		}
+
 		this.engine.debug.info("finish elevation map");
 
 		this.cellularSmooth(8);
@@ -367,47 +338,40 @@ export class GMap {
 				};
 
 				if (elev <= 0) {
-					tile.fg = COLORS.water.close;
+					tile.fg = COLORS().water.close;
 					tile.char = "~";
 					tile.boundary = true;
 					tile.kind = TileKinds.water;
 				} else if (elev > 0.7) {
 					const cNoise = noise4(x * copperFreq, y * copperFreq);
+					const oNoise = noise4(x * 0.01, y * 0.01);
 					if (cNoise > copperThreshold) {
-						tile.fg = COLORS.copper.close;
+						tile.fg = COLORS().copper.close;
 						tile.char = "#";
 						tile.kind = TileKinds.copper;
 					} else {
-						tile.fg = COLORS.rock.close;
+						tile.fg = COLORS().rock.close;
 						tile.char = "#";
 						tile.kind = TileKinds.rock;
 					}
 				} else {
 					const tNoise = noise4(x * treeFreq, y * treeFreq);
 					const bNoise = noise4(x * copperFreq, y * copperFreq);
-					tile.fg = COLORS.grass.close;
+					tile.fg = COLORS().grass.close;
 					tile.char = ".";
 					if (y - 1 > 0 && tNoise > treeThreshold) {
 						tile.promotable = { type: "destructable,collectable", health: 15 };
 						tile.mask = {
-							fg: COLORS.wood.close,
+							fg: COLORS().wood.close,
 							bg: "",
 							char: "♣",
 							kind: TileKinds.wood,
 							promotable: tile.promotable,
 						};
-						// this.tiles[x][y - 1].promotable = tile.promotable;
-						// this.tiles[x][y - 1].mask = {
-						// 	fg: COLORS.leafs.close,
-						// 	bg: "",
-						// 	char: "^",
-						// 	kind: TileKinds.leafs,
-						// 	promotable: tile.promotable,
-						// };
 					} else if (bNoise > 0.85) {
 						tile.promotable = { type: "destructable,collectable", health: 15 };
 						tile.mask = {
-							fg: COLORS.berry.close,
+							fg: COLORS().berry.close,
 							bg: "",
 							char: "o",
 							kind: TileKinds.berry,
@@ -419,9 +383,85 @@ export class GMap {
 			}
 		}
 		this.engine.debug.info("finish map assignments");
+		this.orePass();
+		this.engine.debug.info("finish ore pass");
 		await this.buildClusters();
 		this.engine.debug.info("finish clusters");
 		return { state: true, message: "Map created" };
+	}
+	private samplePoisson(lambda: number, rng: seedrandom.PRNG): number {
+		const L = Math.exp(-lambda);
+		let k = 0;
+		let p = 1;
+		do {
+			k++;
+			p *= rng();
+		} while (p > L);
+		return k - 1;
+	}
+	private growDeposit(
+		seedx: number,
+		seedy: number,
+		targetCells: number,
+		expandProb: number,
+		rng: seedrandom.PRNG,
+	) {
+		const key = (x: number, y: number) => `${x}-${y}`;
+		let deposit = ImmutableSet([key(seedx, seedy)]);
+		const allocated: [number, number][] = [[seedx, seedy]];
+
+		while (deposit.size < targetCells) {
+			if (allocated.length === 0) break;
+			const id = Math.floor(rng() * allocated.length);
+			const [cx, cy] = allocated.splice(id, 1)[0];
+			for (let dx = -1; dx <= 1; dx++) {
+				for (let dy = -1; dy <= 1; dy++) {
+					if (dx === 0 && dy === 0) {
+						continue;
+					}
+					const nx = cx + dx;
+					const ny = cy + dy;
+					const nkey = key(nx, ny);
+					if (!deposit.has(nkey) && rng() < expandProb) {
+						if (nx >= 0 && nx < this.width && ny >= 0 && ny < this.height) {
+							deposit = deposit.add(nkey);
+							allocated.push([nx, ny]);
+							if (deposit.size >= targetCells) break;
+						}
+					}
+				}
+				if (deposit.size >= targetCells) break;
+			}
+		}
+		return deposit;
+	}
+	private orePass() {
+		for (const material of this.materials.filter((m) => m.type === "ore")) {
+			const rng = seedrandom(`${material.name}-ore-pass`);
+			const lambda = material.depositFrequency * this.mapAreaKm2;
+			const num_seeds = this.samplePoisson(lambda, rng);
+			const targetCells = Math.ceil(material.typicalDepositSize);
+			const expandProb = 0.2 * (1 - material.properties.rarity) + 0.1;
+
+			for (let i = 0; i < num_seeds; i++) {
+				const sx = Math.floor(rng() * this.width);
+				const sy = Math.floor(rng() * this.height);
+
+				const deposit = this.growDeposit(sx, sy, targetCells, expandProb, rng);
+				for (const cell of deposit.values()) {
+					const [x, y] = cell.split("-").map(Number);
+					const tile = this.tiles[x][y];
+					if (tile.kind === TileKinds.rock) {
+						if (x > 0 && x < this.width - 1 && y > 0 && y < this.height - 1) {
+							this.tiles[x][y].kind = TileKinds.ore;
+							this.tiles[x][y].fg = undefined; // Let renderer handle color dynamically
+							this.tiles[x][y].char = ":";
+							this.tiles[x][y].oreName = material.name;
+						}
+					}
+				}
+			}
+		}
 	}
 	public viewableDistance(): number {
 		const player = this.engine.player;
@@ -444,6 +484,34 @@ export class GMap {
 		this.tiles = await db.loadTiles(id);
 		this.computedClusters = await db.loadClusters(id);
 		this.buildClusterIndex();
+
+		// Extract unique ore names from loaded tiles and regenerate materials
+		const oreNames = new Set<string>();
+		for (let x = 0; x < this.tiles.length; x++) {
+			for (let y = 0; y < this.tiles[x].length; y++) {
+				const tile = this.tiles[x][y];
+				if (tile.kind === TileKinds.ore && tile.oreName) {
+					oreNames.add(tile.oreName);
+				}
+			}
+		}
+
+		// Regenerate materials for found ore names
+		this.materials = [];
+		for (const oreName of oreNames) {
+			// Use the ore name as seed to recreate the same material
+			const material = makeMaterial(oreName, "ore");
+			this.materials.push(material);
+		}
+
+		// Register the materials so GPU renderer can find them
+		if (this.materials.length > 0) {
+			MaterialRegistry.instance.registerMaterials(this.materials);
+
+			// Invalidate GPU color cache so it picks up the new materials
+			this.gpu.invalidateColorCache();
+		}
+
 		this.saved = true;
 		return true;
 	}
@@ -520,7 +588,6 @@ export class GMap {
 
 			this.engine.display.clear();
 
-			// Fixed: Use 'of' instead of 'in'
 			for (const pixel of pixels) {
 				this.engine.display.draw(
 					pixel.x,
@@ -558,12 +625,30 @@ export class GMap {
 				const dy = wy - this.engine.player.position.y;
 				const dist = Math.sqrt(dx * dx + dy * dy);
 
-				// Fixed: Use proper key lookup
-				const kindName = TileKinds[tile.kind] as keyof typeof COLORS;
-				let cols = COLORS[kindName];
+				let cols: { close: string; far: string; superFar: string };
+				if (
+					tile.kind === TileKinds.ore &&
+					tile.oreName &&
+					(
+						COLORS() as Record<
+							string,
+							{ close: string; far: string; superFar: string }
+						>
+					)[tile.oreName]
+				) {
+					cols = (
+						COLORS() as Record<
+							string,
+							{ close: string; far: string; superFar: string }
+						>
+					)[tile.oreName];
+				} else {
+					const kindName = TileKinds[tile.kind] as keyof typeof COLORS;
+					cols = COLORS()[kindName];
+				}
 				if (tile.mask != null) {
 					const maskKindName = TileKinds[tile.mask.kind] as keyof typeof COLORS;
-					cols = COLORS[maskKindName];
+					cols = COLORS()[maskKindName];
 				}
 
 				let fg = "";
@@ -686,10 +771,10 @@ export class GMap {
 		// Get the tile to determine its "close" (bright) color
 		const tile = this.tiles[worldX][worldY];
 		const kindName = TileKinds[tile.kind] as keyof typeof COLORS;
-		let tileColors = COLORS[kindName];
+		let tileColors = COLORS()[kindName];
 		if (tile.mask != null) {
 			const maskKindName = TileKinds[tile.mask.kind] as keyof typeof COLORS;
-			tileColors = COLORS[maskKindName];
+			tileColors = COLORS()[maskKindName];
 		}
 
 		let resultColor = baseColor;
@@ -800,6 +885,7 @@ export class GMap {
 			[TileKinds.struct]: [],
 			[TileKinds.tree]: [],
 			[TileKinds.berry]: [],
+			[TileKinds.ore]: [],
 		};
 
 		// Fallback to synchronous if workers not available
@@ -844,7 +930,7 @@ export class GMap {
 			for (const points of globalClusterMap.values()) {
 				if (points.length === 0) continue;
 
-				const kind = points[0].kind;
+				const kind = points[0].kind as Exclude<TileKinds, TileKinds.cursor>;
 				let sumX = 0,
 					sumY = 0;
 
@@ -858,11 +944,15 @@ export class GMap {
 					y: Math.floor(sumY / points.length),
 				};
 
-				clusters[kind].push({
-					kind,
-					points: points.map((p) => ({ x: p.x, y: p.y })),
-					center,
-				});
+				if (clusters[kind]) {
+					(clusters[kind] as Cluster[]).push({
+						kind,
+						points: points.map((p) => ({ x: p.x, y: p.y })),
+						center, // center is already a plain object { x, y }
+					});
+				} else {
+					console.warn(`Unknown cluster kind: ${kind}`);
+				}
 			}
 
 			return clusters;
@@ -871,6 +961,8 @@ export class GMap {
 				`Worker clustering failed, falling back to synchronous: ${error}`,
 			);
 		}
+		// Fallback: always return clusters object
+		return clusters;
 	}
 	private async processClusterRemoval(clusterToRemove: Cluster): Promise<void> {
 		if (!clusterToRemove) return;
@@ -939,7 +1031,10 @@ export class GMap {
 				worker.terminate();
 
 				if (success) {
-					const clusterMap = new Map(clusters);
+					const clusterMap = new Map<
+						number,
+						Array<{ x: number; y: number; kind: number }>
+					>(clusters);
 					resolve(clusterMap);
 				} else {
 					reject(new Error(error));

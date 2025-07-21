@@ -26,7 +26,7 @@ export type Material = {
 	depositFrequency: number; // deposits per km²
 	typicalDepositSize: number; // tons
 	colors: {
-		superfar: string;
+		superFar: string;
 		far: string;
 		close: string;
 	};
@@ -83,7 +83,7 @@ const genRanges: Record<
 		brittleness: [0.2, 0.6],
 		electricalConductivity: [1e3, 1e6],
 		emissivity: [0.3, 0.7],
-		rarity: [0, 1],
+		rarity: [0.08, 0.25], // Lower = more expansion
 	},
 	crystal: {
 		density: [2, 6],
@@ -147,6 +147,44 @@ const genRanges: Record<
 	},
 };
 
+// Override ore depositFrequency and typicalDepositSize for more visible ore
+const ORE_DEPOSIT_FREQ_RANGE: [number, number] = [0.25, 0.5]; // even more veins per km²
+const ORE_DEPOSIT_SIZE_RANGE: [number, number] = [40, 80]; // much larger veins
+
+// Patch makeMaterial for ore
+export function makeMaterial(seed: string, type: MaterialType): Material {
+	const name = generateName(seed, type);
+	const abundance = generateAbundance(seed, type);
+	const { rarity, depositFrequency, typicalDepositSize } = calculateRarity(
+		seed,
+		abundance,
+	);
+	const properties = generateProperties(seed, type);
+	properties.rarity = rarity;
+
+	let tunedDepositFrequency = depositFrequency;
+	let tunedDepositSize = typicalDepositSize;
+	if (type === "ore") {
+		const rng = seedrandom(seed + "--ore-tune");
+		tunedDepositFrequency =
+			ORE_DEPOSIT_FREQ_RANGE[0] +
+			rng() * (ORE_DEPOSIT_FREQ_RANGE[1] - ORE_DEPOSIT_FREQ_RANGE[0]);
+		tunedDepositSize =
+			ORE_DEPOSIT_SIZE_RANGE[0] +
+			rng() * (ORE_DEPOSIT_SIZE_RANGE[1] - ORE_DEPOSIT_SIZE_RANGE[0]);
+	}
+
+	return {
+		name,
+		type,
+		properties,
+		abundance,
+		depositFrequency: tunedDepositFrequency,
+		typicalDepositSize: tunedDepositSize,
+		colors: generateMaterialTileColors(seed, type),
+	};
+}
+
 // simple uniform random
 function rand(rng: seedrandom.PRNG, min: number, max: number) {
 	return rng() * (max - min) + min;
@@ -205,7 +243,7 @@ function calculateRarity(seed: string, abundance: number) {
 
 // generate abundance
 function generateAbundance(seed: string, type: MaterialType) {
-	const rng = seedrandom(seed + "--abundance");
+	const rng = seedrandom(`${seed}--abundance`);
 	const base = BASE_ABUNDANCE[type];
 	const variation = 0.75 + rng() * 0.5; // [0.75,1.25]
 	return base * variation;
@@ -213,7 +251,7 @@ function generateAbundance(seed: string, type: MaterialType) {
 
 // universal name generator
 function generateName(seed: string, type: MaterialType) {
-	const rng = seedrandom(seed + "--name");
+	const rng = seedrandom(`${seed}--name`);
 	const comps = type === "fluid" ? fluidNameComps : oreNameComps;
 	const pick = (arr: string[]) => arr[Math.floor(rng() * arr.length)];
 	return pick(comps.prefixes) + pick(comps.middles) + pick(comps.finals);
@@ -221,7 +259,7 @@ function generateName(seed: string, type: MaterialType) {
 
 // generate properties
 function generateProperties(seed: string, type: MaterialType) {
-	const rng = seedrandom(seed + "--props");
+	const rng = seedrandom(`${seed}--props`);
 	const props: Partial<MaterialProperties> = {};
 	for (const key in genRanges[type]) {
 		const [min, max] = genRanges[type][key as keyof MaterialProperties];
@@ -234,15 +272,15 @@ export function generateMaterialTileColors(
 	seed: string,
 	type: MaterialType,
 ): {
-	superfar: string;
+	superFar: string;
 	far: string;
 	close: string;
 } {
-	const rng = seedrandom(seed + "--color");
+	const rng = seedrandom(`${seed}--color`);
 
 	// Assign base hue ranges per material type for visual distinction
 	const typeHue: Record<MaterialType, [number, number]> = {
-		ore: [20, 50], // earthy, ochre, brown
+		ore: [10, 80], // earthy tones: dark browns, ochres, rusts, coppers, golds, warm grays
 		crystal: [180, 260], // blue, violet
 		alloy: [0, 60], // metallic, gold, bronze
 		glass: [170, 200], // cyan, teal
@@ -253,16 +291,16 @@ export function generateMaterialTileColors(
 	const [hueMin, hueMax] = typeHue[type];
 	const hue = Math.floor(rng() * (hueMax - hueMin) + hueMin);
 
-	// Close: most saturated, lighter (closest)
-	const close = hslToHex(hue, 32 + rng() * 28, 62 + rng() * 10);
+	// Close: most saturated, lighter (closest) - vibrant, distinct mineral colors
+	const close = hslToHex(hue, 45 + rng() * 35, 65 + rng() * 20);
 
-	// Far: more saturated, mid-light
-	const far = hslToHex(hue, 22 + rng() * 18, 42 + rng() * 8);
+	// Far: more saturated, mid-light - still distinct but weathered
+	const far = hslToHex(hue, 35 + rng() * 25, 45 + rng() * 15);
 
-	// Superfar: desaturated, dark (farthest, closest to black)
-	const superfar = hslToHex(hue, 12 + rng() * 8, 18 + rng() * 8);
+	// Superfar: desaturated, dark (farthest, closest to black) - dark but still identifiable
+	const superFar = hslToHex(hue, 15 + rng() * 10, 20 + rng() * 10);
 
-	return { superfar, far, close };
+	return { superFar, far, close };
 }
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -279,35 +317,14 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 // main generator
-export function makeMaterial(seed: string, type: MaterialType): Material {
-	const name = generateName(seed, type);
-	const abundance = generateAbundance(seed, type);
-	const { rarity, depositFrequency, typicalDepositSize } = calculateRarity(
-		seed,
-		abundance,
-	);
-	const properties = generateProperties(seed, type);
-	properties.rarity = rarity;
-
-	return {
-		name,
-		type,
-		properties,
-		abundance,
-		depositFrequency,
-		typicalDepositSize,
-		colors: generateMaterialTileColors(seed, type),
-	};
-}
-
 export function generateMaterialInventory(seed: string, count: number) {
-	const rng = seedrandom(seed + "--inventory");
+	const rng = seedrandom(`${seed}--inventory`);
 	const inventory: Material[] = [];
 	for (let i = 0; i < count; i++) {
 		const type = ["ore", "crystal", "alloy", "glass", "composite"][
 			Math.floor(rng() * 5)
 		] as MaterialType;
-		inventory.push(makeMaterial(seed, type));
+		inventory.push(makeMaterial(`${seed}-${i}`, type));
 	}
 	return inventory;
 }
