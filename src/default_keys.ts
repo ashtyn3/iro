@@ -31,4 +31,8 @@ export const defaultKeys = {
 		key: "p",
 		desc: "Pause/Resume",
 	},
+	info: {
+		key: "t",
+		desc: "Open info panel",
+	},
 };

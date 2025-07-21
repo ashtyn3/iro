@@ -107,7 +107,7 @@ export class GPURenderer {
 	}
 
 	private createTileBuffer(tiles: Tile[][], viewport: Vec2d): GPUBuffer {
-		const data = new Uint32Array(VIEWPORT.x * VIEWPORT.y * 10);
+		const data = new Uint32Array(VIEWPORT.x * VIEWPORT.y * 13);
 
 		let i = 0;
 		const kindCounts: Record<number, number> = {};
@@ -154,6 +154,9 @@ export class GPURenderer {
 					data[i++] = tile.mask ? this.hexToInt(tile.mask.bg) : 0;
 					data[i++] = tile.mask ? tile.mask.char.charCodeAt(0) : 0;
 					data[i++] = tile.mask ? maskColorIndex : 0; // Use mask color index
+					data[i++] = tile.cursor ? 1 : 0;
+					data[i++] = tile.cursor ? this.hexToInt(tile.cursor.fg) : 0;
+					data[i++] = tile.cursor ? tile.cursor.char.charCodeAt(0) : 0;
 				} else {
 					kindCounts[TileKinds.grass] = (kindCounts[TileKinds.grass] || 0) + 1;
 
@@ -170,6 +173,9 @@ export class GPURenderer {
 					data[i++] = 0;
 					data[i++] = 0;
 					data[i++] = 0;
+					data[i++] = 0; // has_cursor
+					data[i++] = 0; // cursor_fg
+					data[i++] = 0; // cursor_char
 				}
 			}
 		}

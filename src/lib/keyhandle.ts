@@ -1,3 +1,4 @@
+import Info, { mousePosition } from "~/components/info";
 import InventoryViewer from "~/components/inventoryView";
 import { defaultKeys } from "~/default_keys";
 import type { Act } from "./action";
@@ -81,6 +82,19 @@ export const KeyHandles: { [key: string]: Act } = {
 	[keyMap().pause.key]: {
 		perform: async (e: Engine): Promise<void> => {
 			e.clockSystem.toggle();
+		},
+	},
+	[keyMap().info.key]: {
+		perform: async (e: Engine): Promise<void> => {
+			if (e.infoMenu.displayed) {
+				e.infoMenu.menuOff();
+			} else {
+				e.infoMenu.setMenu(() =>
+					Info({
+						engine: e,
+					}),
+				);
+			}
 		},
 	},
 };

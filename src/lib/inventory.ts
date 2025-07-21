@@ -363,3 +363,13 @@ export const createMenuHolder = (engine: Engine) => {
 	const builtEntity = built.build();
 	return builtEntity;
 };
+
+export const createExtendedMenuHolder = (engine: Engine) => {
+	const e: Existable = { engine, _components: immutable.Set() };
+	const built = new EntityBuilder(e)
+		.add(MenuHolder, {
+			menu: () => null,
+		})
+		.add(Syncable, "Menu");
+	return built;
+};

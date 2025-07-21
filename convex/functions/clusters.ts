@@ -104,6 +104,7 @@ export const updateClusters = mutation(
 		}
 	},
 );
+
 function encodeToArrayBuffer(group: Cluster[]): ArrayBuffer {
 	const encoded = encode(group);
 	return encoded.buffer.slice(

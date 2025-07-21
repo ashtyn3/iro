@@ -9,6 +9,9 @@ struct TileData {
     mask_bg: u32,
     mask_char: u32,
     mask_color_index: u32,  // Mask color buffer index (not mask tile kind)
+    has_cursor: u32,
+    cursor_fg: u32,
+    cursor_char: u32,
 }
 
 struct ColorData {
@@ -216,6 +219,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     var char_to_use = tile.char;
     var bg_to_use = tile.bg_color;
+    var fg_to_use = rgb_to_hex(fg_rgb);
 
     if tile.has_mask != 0u {
         char_to_use = tile.mask_char;
@@ -223,10 +227,16 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             bg_to_use = tile.mask_bg;
         }
     }
+    
+    // Cursor takes priority over everything else
+    if tile.has_cursor != 0u {
+        char_to_use = tile.cursor_char;
+        fg_to_use = tile.cursor_fg;
+    }
 
     output[tile_index] = PixelOutput(
         char_to_use,
-        rgb_to_hex(fg_rgb),
+        fg_to_use,
         bg_to_use
     );
 }

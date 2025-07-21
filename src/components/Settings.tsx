@@ -2,9 +2,14 @@ import { set } from "immutable";
 import { createEffect, For, useContext } from "solid-js";
 import { ConvexContext, createMutation, createQuery } from "~/convex";
 import { api } from "../../convex/_generated/api";
+import { DB } from "../lib/state";
 
 export function KeyMapSwitcher({ settings }: { settings: any }) {
-	const updateSettings = createMutation(api.functions.settings.updateSettings);
+	const convex = useContext(ConvexContext);
+	const db = convex ? new DB(convex) : undefined;
+	const updateSettings = async (newSettings: any) => {
+		if (db) await db.updateSettings(newSettings);
+	};
 	return (
 		<div>
 			<For each={Object.keys(settings()?.keyMap ?? {})}>
@@ -37,27 +42,35 @@ export function KeyMapSwitcher({ settings }: { settings: any }) {
 
 export default function Settings() {
 	const convex = useContext(ConvexContext);
-	const settings: () => { keyMap: any; handed: string } | undefined =
-		createQuery(api.functions.settings.getSettings, {});
-
-	createEffect(() => {
-		if (settings() !== undefined) {
-			localStorage.setItem("keys", JSON.stringify(settings()?.keyMap));
-			localStorage.setItem("handed", settings()?.handed ?? "right");
+	const db = convex ? new DB(convex) : undefined;
+	const [settings, setSettings] = [
+		() => undefined as { keyMap: any; handed: string } | undefined,
+		(v: any) => {},
+	];
+	createEffect(async () => {
+		if (db) {
+			const s = await db.getSettings();
+			if (s !== undefined) {
+				localStorage.setItem("keys", JSON.stringify(s.keyMap));
+				localStorage.setItem("handed", s.handed ?? "right");
+			}
 		}
 	});
-	const hasSettings = createQuery(api.functions.settings.hasSettings, {});
-	createEffect(() => {
-		if (hasSettings() === false) {
-			convex?.mutation(api.functions.settings.createSettings, {});
+	createEffect(async () => {
+		if (db) {
+			const has = await db.hasSettings();
+			if (has === false) {
+				await db.createSettings();
+			}
 		}
 	});
-	const updateSettings = createMutation(api.functions.settings.updateSettings);
-
-	const handleHandedChange = (event: Event) => {
+	const updateSettings = async (newSettings: any) => {
+		if (db) await db.updateSettings(newSettings);
+	};
+	const handleHandedChange = async (event: Event) => {
 		const target = event.target as HTMLSelectElement;
 		const value = target.value as "left" | "right";
-		updateSettings({ handed: value });
+		await updateSettings({ handed: value });
 	};
 
 	return (

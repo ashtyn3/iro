@@ -1,12 +1,12 @@
 import type { Engine } from "~/lib";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import { DB } from "../lib/state";
 
 export default function DeathView({ engine }: { engine: Engine }) {
 	const handleRestart = async () => {
-		await engine.convex.mutation(api.functions.saveTileSet.death, {
-			tileSetId: engine.mapBuilder.mapId as Id<"tileSets">,
-		});
+		const db = new DB(engine.convex);
+		await db.death(engine.mapBuilder.mapId as Id<"tileSets">);
 		window.onbeforeunload = () => {};
 		window.location.reload();
 	};

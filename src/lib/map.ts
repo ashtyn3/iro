@@ -63,6 +63,11 @@ export interface Tile {
 		kind: TileKinds;
 		promotable: promotion;
 	} | null;
+	cursor?: {
+		fg: string;
+		bg: string;
+		char: string;
+	} | null;
 	promotable?: promotion;
 	oreName?: string; // For dynamic ore color lookup
 }
@@ -275,10 +280,8 @@ export class GMap {
 		}, 2000);
 	}
 	async genMap(): Promise<{ state: boolean; message: string }> {
-		const canMakeMap = await this.convex.query(
-			api.functions.saveTileSet.canMakeMap,
-			{},
-		);
+		const db = new DB(this.convex);
+		const canMakeMap = await db.canMakeMap();
 		if (!canMakeMap.state) {
 			return { state: false, message: canMakeMap.message };
 		}
@@ -287,6 +290,7 @@ export class GMap {
 		for (let i = 0; i < 10; i++) {
 			this.materials.push(makeMaterial(`${this.mapId}-ore-${i}`, "ore"));
 		}
+
 		if (!Array.isArray(this.materials)) {
 			throw new Error("generateMaterialInventory did not return an array");
 		}
@@ -483,6 +487,8 @@ export class GMap {
 		const db = new DB(this.convex);
 		this.tiles = await db.loadTiles(id);
 		this.computedClusters = await db.loadClusters(id);
+		this.materials = await db.loadMaterials(id);
+		MaterialRegistry.instance.registerMaterials(this.materials);
 		this.buildClusterIndex();
 
 		// Extract unique ore names from loaded tiles and regenerate materials
@@ -527,6 +533,7 @@ export class GMap {
 				act: async () => {
 					await db.saveTiles(this.mapId, this.tiles);
 					await db.saveClusters(this.mapId, this.computedClusters);
+					await db.saveMaterials(this.mapId, this.materials);
 					this.saved = true;
 					await this.flushWriteQueue();
 					this.engine.debug.info("saved");
@@ -675,8 +682,10 @@ export class GMap {
 				// Apply light contributions
 				fg = this.applyLightContributions(wx, wy, fg, lights);
 
-				const ch = tile.mask?.char ?? tile.char;
-				this.engine.display.draw(sx, sy, ch, fg, tile.bg);
+				// Determine which character to show (cursor takes priority)
+				const ch = tile.cursor?.char ?? tile.mask?.char ?? tile.char;
+				const chfg = tile.cursor?.fg ?? fg;
+				this.engine.display.draw(sx, sy, ch, chfg, tile.bg);
 			}
 		}
 	}

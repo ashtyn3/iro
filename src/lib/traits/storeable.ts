@@ -3,6 +3,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { Component } from "../comps";
 import { deserializeEntity } from "../entity";
+import { DB } from "../state";
 import type { Syncable } from "../sync";
 import type { Entity, Existable } from "./types";
 
@@ -19,12 +20,10 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 	e.id = init;
 
 	e.sync = async () => {
-		const state = await e.engine.convex.query(
-			api.functions.entityStates.getEntityState,
-			{
-				tileSetId: e.engine.mapBuilder.mapId as Id<"tileSets">,
-				entityId: e.id,
-			},
+		const db = new DB(e.engine.convex);
+		const state = await db.getEntityState(
+			e.engine.mapBuilder.mapId as Id<"tileSets">,
+			e.id,
 		);
 		if (state) {
 			deserializeEntity(e.engine, SuperJSON.parse(state), e);
@@ -41,11 +40,12 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 	};
 
 	e.store = async () => {
-		await e.engine.convex.mutation(api.functions.entityStates.saveEntityState, {
-			tileSetId: e.engine.mapBuilder.mapId as Id<"tileSets">,
-			entityId: e.id,
-			state: SuperJSON.stringify(e.serialize()),
-		});
+		const db = new DB(e.engine.convex);
+		await db.saveEntityState(
+			e.engine.mapBuilder.mapId as Id<"tileSets">,
+			e.id,
+			SuperJSON.stringify(e.serialize()),
+		);
 	};
 	return e;
 };

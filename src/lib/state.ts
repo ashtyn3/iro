@@ -5,6 +5,7 @@ import * as immutable from "immutable";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Debug } from "./debug";
+import type { Material } from "./generators/material_gen";
 import type { Cluster, Clusters, Tile } from "./map";
 import type { Entity, Movable } from "./traits";
 
@@ -223,6 +224,26 @@ export class DB {
 			tileSetId: clusterId,
 			clusters,
 		});
+	}
+
+	async saveMaterials(tileSetId: string, materials: Material[]): Promise<void> {
+		const encodedMaterials = encode(materials);
+		const compressedMaterials = await this.compressGzip(encodedMaterials);
+		await this.client.mutation(api.functions.materials.saveMaterials, {
+			tileSetId: tileSetId as Id<"tileSets">,
+			materials: compressedMaterials,
+		});
+	}
+
+	async loadMaterials(tileSetId: string): Promise<Material[]> {
+		const materials = await this.client.query(
+			api.functions.materials.loadMaterials,
+			{
+				tileSetId: tileSetId as Id<"tileSets">,
+			},
+		);
+		const decompressedMaterials = await this.decompressGzip(materials);
+		return decode(decompressedMaterials) as Material[];
 	}
 
 	async updateViewportTiles(
@@ -526,5 +547,58 @@ export class DB {
 			Debug.getInstance().error(`Error in loadTiles: ${error}`);
 			throw error;
 		}
+	}
+
+	async death(tileSetId: Id<"tileSets">): Promise<void> {
+		await this.client.mutation(api.functions.saveTileSet.death, {
+			tileSetId,
+		});
+	}
+
+	async canMakeMap(): Promise<{ state: boolean; message: string }> {
+		return await this.client.query(api.functions.saveTileSet.canMakeMap, {});
+	}
+
+	async getEntityState(
+		tileSetId: Id<"tileSets">,
+		entityId: string,
+	): Promise<string | null> {
+		return await this.client.query(api.functions.entityStates.getEntityState, {
+			tileSetId,
+			entityId,
+		});
+	}
+
+	async saveEntityState(
+		tileSetId: Id<"tileSets">,
+		entityId: string,
+		state: string,
+	): Promise<void> {
+		await this.client.mutation(api.functions.entityStates.saveEntityState, {
+			tileSetId,
+			entityId,
+			state,
+		});
+	}
+
+	async getSettings(): Promise<{ keyMap: any; handed: string } | undefined> {
+		const result = await this.client.query(
+			api.functions.settings.getSettings,
+			{},
+		);
+		if (result === null) return undefined;
+		return result;
+	}
+
+	async hasSettings(): Promise<boolean> {
+		return await this.client.query(api.functions.settings.hasSettings, {});
+	}
+
+	async createSettings(): Promise<void> {
+		await this.client.mutation(api.functions.settings.createSettings, {});
+	}
+
+	async updateSettings(settings: any): Promise<void> {
+		await this.client.mutation(api.functions.settings.updateSettings, settings);
 	}
 }

@@ -1,28 +1,28 @@
 import type { ConvexClient } from "convex/browser";
-import * as immutable from "immutable";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
-import Info from "~/components/info";
+import Info, { setMousePosition } from "~/components/info";
 import { Clock } from "./clock";
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
-import { createMenuHolder, Inventory, type MenuHolder } from "./inventory";
+import {
+	createExtendedMenuHolder,
+	createMenuHolder,
+	type MenuHolder,
+} from "./inventory";
 import { KeyHandles, keyMap } from "./keyhandle";
 import { GMap, type Tile, TileKinds, VIEWPORT } from "./map";
 import { COLORS } from "./material";
+import {
+	createMouseMoveListener,
+	MouseMove,
+	type MouseMoveListener,
+} from "./mouse";
 import { Fire } from "./objects/fire";
 import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
 import { type State, Vec2d } from "./state";
-import {
-	Destructible,
-	type Movable,
-	Name,
-	Named,
-	Renderable,
-	type Storeable,
-	Timed,
-} from "./traits";
+import { Renderable } from "./traits";
 
 export class Engine {
 	width: number;
@@ -42,6 +42,7 @@ export class Engine {
 	clockSystem: Clock;
 	debug: Debug;
 	infoMenu: MenuHolder;
+	mouse: MouseMoveListener;
 
 	constructor(w: number, h: number, convex: ConvexClient) {
 		this.width = w;
@@ -87,7 +88,16 @@ export class Engine {
 		};
 		this.menuHolder = createMenuHolder(this);
 		this.messageMenu = createMenuHolder(this);
-		this.infoMenu = createMenuHolder(this);
+
+		const infoMenu = createExtendedMenuHolder(this);
+		infoMenu.add(MouseMove, {
+			mousemove: (position: Vec2d) => {
+				setMousePosition(position);
+			},
+		});
+
+		this.infoMenu = infoMenu.build();
+		this.mouse = createMouseMoveListener(this);
 	}
 
 	async start() {
@@ -128,7 +138,6 @@ export class Engine {
 		});
 
 		let lastPos: Vec2d | null = null;
-		let lastTile: Tile | null = null;
 		document.getElementById("gamebox")?.addEventListener("mousemove", (e) => {
 			const viewportPos = this.display.eventToPosition(e);
 			const viewportVec = Vec2d({ x: viewportPos[0], y: viewportPos[1] });
@@ -144,44 +153,31 @@ export class Engine {
 				worldVec.x >= this.width ||
 				worldVec.y >= this.height
 			) {
-				if (lastPos && lastTile) {
-					this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
+				// Clear cursor from last position
+				if (lastPos) {
+					this.mapBuilder.tiles[lastPos.x][lastPos.y].cursor = null;
 				}
-				lastTile = null;
 				lastPos = null;
 				return;
 			}
 
-			if (lastPos && lastTile && !lastPos.equals(worldVec)) {
-				this.mapBuilder.tiles[lastPos.x][lastPos.y] = lastTile;
+			// Clear cursor from last position
+			if (lastPos && !lastPos.equals(worldVec)) {
+				this.mapBuilder.tiles[lastPos.x][lastPos.y].cursor = null;
 			}
 
-			if (
-				(!lastPos || !lastPos.equals(worldVec)) &&
-				this.mapBuilder.tiles[worldVec.x][worldVec.y].mask?.kind !==
-					TileKinds.cursor
-			) {
-				lastTile = { ...this.mapBuilder.tiles[worldVec.x][worldVec.y] };
-			}
-
-			this.mapBuilder.tiles[worldVec.x][worldVec.y].mask = {
+			// Add cursor to current position
+			this.mapBuilder.tiles[worldVec.x][worldVec.y].cursor = {
 				fg: COLORS.colors().cursor.close,
 				bg: "",
 				char: "X",
-				kind: TileKinds.cursor,
-				promotable: { type: "cursor" },
 			};
 
 			lastPos = worldVec;
 			const viewDistance = this.mapBuilder.viewableDistance();
 			const distance = calcDistanceBtwVecs(worldVec, this.player.position);
 			if (distance < viewDistance) {
-				this.infoMenu.setMenu(() => {
-					return Info({
-						engine: this,
-						tile: this.mapBuilder.tiles[worldVec.x][worldVec.y],
-					});
-				});
+				this.mouse.position = worldVec;
 				return;
 			}
 		});

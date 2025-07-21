@@ -16,6 +16,10 @@ export default defineSchema({
 		empty_blocks: v.optional(v.boolean()),
 		empty_clusters: v.optional(v.boolean()),
 	}).index("byOwner", ["owner"]),
+	materials: defineTable({
+		tileSetId: v.id("tileSets"),
+		data: v.bytes(),
+	}).index("byTileSetId", ["tileSetId"]),
 
 	settings: defineTable({
 		keyMap: v.any(),
@@ -43,7 +47,7 @@ export default defineSchema({
 	clusters: defineTable({
 		tileSetId: v.id("tileSets"),
 		kind: v.number(),
-		data: v.bytes(),
+		data: v.any(),
 	})
 		.index("byTileSetId", ["tileSetId"])
 		.index("byIdAndKind", ["tileSetId", "kind"]),
