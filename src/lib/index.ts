@@ -2,6 +2,7 @@ import type { ConvexClient } from "convex/browser";
 import * as immutable from "immutable";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
+import Info from "~/components/info";
 import { Clock } from "./clock";
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
@@ -40,6 +41,7 @@ export class Engine {
 	messageMenu: MenuHolder;
 	clockSystem: Clock;
 	debug: Debug;
+	infoMenu: MenuHolder;
 
 	constructor(w: number, h: number, convex: ConvexClient) {
 		this.width = w;
@@ -85,6 +87,7 @@ export class Engine {
 		};
 		this.menuHolder = createMenuHolder(this);
 		this.messageMenu = createMenuHolder(this);
+		this.infoMenu = createMenuHolder(this);
 	}
 
 	async start() {
@@ -173,6 +176,12 @@ export class Engine {
 			const viewDistance = this.mapBuilder.viewableDistance();
 			const distance = calcDistanceBtwVecs(worldVec, this.player.position);
 			if (distance < viewDistance) {
+				this.infoMenu.setMenu(() => {
+					return Info({
+						engine: this,
+						tile: this.mapBuilder.tiles[worldVec.x][worldVec.y],
+					});
+				});
 				return;
 			}
 		});

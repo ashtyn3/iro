@@ -93,6 +93,7 @@ export default function Game({ engine }: { engine: Engine }) {
 		const player: () => PlayerType = () => engine.player.value() as PlayerType;
 		const menu = () => engine.menuHolder.value() as MenuHolder;
 		const messageMenu = () => engine.messageMenu.value() as MenuHolder;
+		const infoMenu = () => engine.infoMenu.value() as MenuHolder;
 		const isSaving = createMemo(() => engine.mapBuilder.isFlushingQueue);
 
 		return (
@@ -121,6 +122,7 @@ export default function Game({ engine }: { engine: Engine }) {
 						/>
 					</div>
 				</div>
+				{infoMenu().Menu()}
 				{messageMenu().Menu()}
 			</div>
 		);
