@@ -86,23 +86,42 @@ const InfoTab = ({ engine, tile }: TabContentProps) => {
 
 const StatsTab = ({ engine, tile }: TabContentProps) => {
 	const player: () => PlayerType = () => engine.player.value() as PlayerType;
+	const PlayerFatigue = () => {
+		if (player().FatigueLevel > 59) {
+			return "text-red-500";
+		} else if (player().FatigueLevel > 39) {
+			return "text-yellow-500";
+		} else {
+			return "text-green-500";
+		}
+	};
 	return (
 		<div class="p-4">
 			<h3 class="text-lg font-bold mb-2">Statistics</h3>
 			<div class="space-y-2">
 				<p>
-					<strong>Map Size:</strong> {engine.mapBuilder.width} ×{" "}
-					{engine.mapBuilder.height}
-				</p>
-				<p>
-					<strong>Player Position:</strong> ({player().position.x},{" "}
-					{player().position.y})
-				</p>
-				<p>
 					<strong>Player Air:</strong> {player().air}%
 				</p>
 				<p>
 					<strong>Player Health:</strong> {player().health}
+				</p>
+				<p>
+					<strong>Player PCr:</strong> {player().PCr?.toFixed(1) || 0}%
+				</p>
+				<p>
+					<strong>Player Lactate:</strong> {player().Lactate?.toFixed(1) || 0}%
+				</p>
+				<p>
+					<strong>Player VO2:</strong> {player().VO2?.toFixed(1) || 0}%
+				</p>
+				<p>
+					<strong>Player Glucose:</strong> {player().Glucose?.toFixed(1) || 0}%
+				</p>
+				<p>
+					<strong>Player Fatigue:</strong>{" "}
+					<span class={PlayerFatigue()}>
+						{player().FatigueLevel?.toFixed(1) || 0}%
+					</span>
 				</p>
 			</div>
 		</div>

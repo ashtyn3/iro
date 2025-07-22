@@ -1,9 +1,9 @@
-import type { Entity, Existable } from "./traits";
+import type { Existable } from "./traits";
 
 export type Component<Added, P = {}> = (
 	base: Existable,
 	params: P,
-) => Entity & Added;
+) => Existable & Added;
 
 export type AddedOf<M> = M extends Component<infer A, any> ? A : never;
 

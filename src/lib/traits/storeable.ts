@@ -31,7 +31,8 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 	};
 
 	e.serialize = () => {
-		const { engine, ...serializableEntity } = e;
+		const { engine, ...serializableEntity } = e as any;
+		delete (serializableEntity as any).mapBuilder;
 		return serializableEntity;
 	};
 

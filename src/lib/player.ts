@@ -19,6 +19,7 @@ import {
 	Timed,
 } from "./traits";
 import { Trap } from "./traits/object_props";
+import { OrganicBody } from "./traits/sims/bodily_stress";
 
 const timingChain = (e: Engine) =>
 	Event("AirRadius", secondsToFrames(1), () => {
@@ -61,6 +62,25 @@ const timingChain = (e: Engine) =>
 			if (e.player.air === 0) {
 				e.mapBuilder.VIEW_RADIUS = e.mapBuilder.VIEW_RADIUS === 1 ? 0 : 1;
 			}
+		})
+		.and("organicBody", 1, () => {
+			e.player.o2_supply = e.player.air;
+			// Let F_cmd decay naturally instead of resetting to 0
+			e.player.F_cmd = Math.max(0, e.player.F_cmd - 0.5); // Decay by 50 per frame
+			e.player.tick(0.5);
+			e.player.update({
+				o2_supply: e.player.o2_supply,
+				PCr: e.player.PCr,
+				Lactate: e.player.Lactate,
+				VO2: e.player.VO2,
+				Glucose: e.player.Glucose,
+				Temp: e.player.Temp,
+				FatigueLevel: e.player.FatigueLevel,
+				F: e.player.F,
+				a_I: e.player.a_I,
+				a_IIa: e.player.a_IIa,
+				a_IIx: e.player.a_IIx,
+			});
 		});
 const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {
 	return new EntityBuilder(createEntity(e, char))
@@ -86,7 +106,8 @@ const playerBuilder = (e: Engine, char: string, dominant: "left" | "right") => {
 		.add(Destructible, {
 			maxHealth: 20,
 			currentHealth: 20,
-		});
+		})
+		.add(OrganicBody, {});
 };
 
 export type PlayerType = Entity &
@@ -98,7 +119,8 @@ export type PlayerType = Entity &
 	Renderable &
 	Timed &
 	Named &
-	Destructible;
+	Destructible &
+	OrganicBody;
 
 export const Player = (
 	e: Engine,

@@ -17,6 +17,7 @@ import {
 	Movable,
 	type Renderable,
 } from "./traits";
+import type { OrganicBody } from "./traits/sims/bodily_stress";
 
 export interface Item extends Act {
 	name: string;
@@ -81,6 +82,25 @@ export const Items: { [key: string]: Item } = {
 
 				const entity = getUnderneath(e, positionKey);
 
+				const hasOrganicBody =
+					actor._components.has(Symbol.for("OrganicBody")) ||
+					Array.from(actor._components).some((symbol) =>
+						symbol.toString().includes("OrganicBody"),
+					);
+
+				if (hasOrganicBody) {
+					const organicBody = actor as unknown as OrganicBody;
+					organicBody.F_cmd = 180;
+					if (organicBody.FatigueLevel > 59) {
+						e.messageMenu.setMenu(() =>
+							Msg({
+								engine: e,
+								msg: "You are too tired to swing the pickaxe",
+							}),
+						);
+						return;
+					}
+				}
 				entity.damage(7.5);
 
 				if (entity.health <= 0) {
@@ -135,6 +155,24 @@ export const Items: { [key: string]: Item } = {
 				const positionKey = Vec2d({ x: actor.position.x, y: actor.position.y });
 
 				const entity = getUnderneath(e, positionKey);
+				const hasOrganicBody =
+					actor._components.has(Symbol.for("OrganicBody")) ||
+					Array.from(actor._components).some((symbol) =>
+						symbol.toString().includes("OrganicBody"),
+					);
+				if (hasOrganicBody) {
+					const organicBody = actor as unknown as OrganicBody;
+					organicBody.F_cmd = 220;
+					if (organicBody.FatigueLevel > 59) {
+						e.messageMenu.setMenu(() =>
+							Msg({
+								engine: e,
+								msg: "You are too tired to punch a tree",
+							}),
+						);
+						return;
+					}
+				}
 				entity.damage(3);
 
 				if (entity.health <= 0) {
@@ -163,6 +201,9 @@ export const Items: { [key: string]: Item } = {
 						},
 					);
 
+					e.messageMenu.setMenu(() =>
+						Msg({ engine: e, msg: `You have punched down a tree` }),
+					);
 					for (const up of tileUpdates) {
 						await e.mapBuilder.updateViewportTile(up.x, up.y, up.tile);
 					}
@@ -231,7 +272,21 @@ export const Items: { [key: string]: Item } = {
 			actor: Movable & Destructible & Syncable & Inventory,
 		): Promise<void> => {
 			actor.heal(5);
-			e.messageMenu.setMenu(() => Msg({ engine: e, msg: "You ate a berry" }));
+
+			// Add glucose when eating berries
+			const hasOrganicBody =
+				actor._components.has(Symbol.for("OrganicBody")) ||
+				Array.from(actor._components).some((symbol) =>
+					symbol.toString().includes("OrganicBody"),
+				);
+			if (hasOrganicBody) {
+				const organicBody = actor as unknown as OrganicBody;
+				organicBody.Glucose = Math.min(100, organicBody.Glucose + 15); // Add 15 glucose per berry
+			}
+
+			e.messageMenu.setMenu(() =>
+				Msg({ engine: e, msg: "You ate a berry (+15 glucose)" }),
+			);
 			actor.removeHand(actor.dominant);
 
 			if (actor.update) {

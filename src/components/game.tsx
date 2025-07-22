@@ -16,16 +16,17 @@ import InventoryViewer from "./inventoryView";
 
 export function Inventory({ engine }: { engine: Engine }) {
 	const itemArray = (): { count: number; item: Item }[] =>
-		engine.player.value().Items;
+		(engine.player.value() as any).Items;
 	return (
 		<div class="flex flex-row gap-2">
 			<For each={itemArray()}>
 				{(slot) =>
-					slot?.item?.name !== "none" && (
+					slot?.item?.name !== "none" &&
+					slot?.item?.sprite && (
 						<div class="flex flex-row gap-2 items-center">
 							<img
-								src={slot.item.sprite[0]}
-								alt={slot.item.name}
+								src={slot.item.sprite[0] || ""}
+								alt={slot.item.name || "item"}
 								class="w-8 h-8"
 							/>
 							x{slot.count}
