@@ -90,10 +90,10 @@ export const OrganicBody: Component<OrganicBody, {}> = (base) => {
 	e.glucose_consumption_rate = 1.0;
 
 	// Initialize temperature properties
-	e.mass = 70.0;
-	e.heat_capacity = 3500.0;
+	e.mass = 10.0; // Reduced from 70.0 to make temperature changes more responsive
+	e.heat_capacity = 500.0; // Reduced from 3500.0 to make temperature changes more responsive
 	e.efficiency = 0.25;
-	e.heat_loss_rate = 0.1;
+	e.heat_loss_rate = 0.1; // Very small scaling factor for gradual changes
 
 	// Initialize fatigue properties
 	e.lactate_weight = 1.0; // Back to original
@@ -199,12 +199,32 @@ export const OrganicBody: Component<OrganicBody, {}> = (base) => {
 			const vo2_decrease = dt * e.vo2_recovery_rate;
 			e.VO2 = Math.max(0, e.VO2 - vo2_decrease);
 		}
+		// If body temperature is too low, apply cold stress effects
+		if (e.Temp < 36.5) {
+			// Increase fatigue due to cold
+			const cold_stress = (36.5 - e.Temp) * 0.2; // Arbitrary scaling factor
+			e.FatigueLevel = Math.min(100, e.FatigueLevel + cold_stress * dt);
+
+			// Reduce max force output due to cold (simulate shivering/weakness)
+			const cold_penalty = Math.max(0, (36.5 - e.Temp) * 0.01); // up to 1% per degree below 36.5
+			e.F = e.F * (1 - cold_penalty);
+
+			// If hypothermic (<35°C), apply health penalty
+			if (e.Temp < 35) {
+				if (
+					"currentHealth" in e &&
+					typeof (e as any).currentHealth === "number"
+				) {
+					(e as any).currentHealth = Math.max(0, (e as any).currentHealth - 1);
+				}
+			}
+		}
 
 		// Temperature
-		const heat_production = force_ratio * 100;
+		const heat_production = force_ratio * 1; // Very small scaling factor for gradual changes
 		const heat_loss = (e.Temp - CORE_TEMP_NORMAL) * e.heat_loss_rate * 100;
 		const net_heat = heat_production - heat_loss;
-		const temp_change = (net_heat * dt) / (e.mass * e.heat_capacity);
+		const temp_change = net_heat * dt * 0.1; // Much larger scaling factor for visible temperature changes
 		e.Temp += temp_change;
 		e.Temp = Math.max(35, Math.min(42, e.Temp));
 

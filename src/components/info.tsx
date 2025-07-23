@@ -123,6 +123,9 @@ const StatsTab = ({ engine, tile }: TabContentProps) => {
 						{player().FatigueLevel?.toFixed(1) || 0}%
 					</span>
 				</p>
+				<p>
+					<strong>Player Temp:</strong> {player().Temp?.toFixed(2) || 0}°C
+				</p>
 			</div>
 		</div>
 	);
