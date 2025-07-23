@@ -1,5 +1,11 @@
 import { set } from "immutable";
-import { createEffect, For, useContext } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	useContext,
+} from "solid-js";
 import { ConvexContext, createMutation, createQuery } from "~/convex";
 import { api } from "../../convex/_generated/api";
 import { DB } from "../lib/state";
@@ -22,6 +28,7 @@ export function KeyMapSwitcher({ settings }: { settings: any }) {
 							onkeydown={(e) => {
 								e.preventDefault();
 								const key = e.key;
+								e.target.value = key;
 								updateSettings({
 									keyMap: {
 										...settings()?.keyMap,
@@ -43,10 +50,13 @@ export function KeyMapSwitcher({ settings }: { settings: any }) {
 export default function Settings() {
 	const convex = useContext(ConvexContext);
 	const db = convex ? new DB(convex) : undefined;
-	const [settings, setSettings] = [
-		() => undefined as { keyMap: any; handed: string } | undefined,
-		(v: any) => {},
-	];
+	const [settings, setSettings] = createResource(async () => {
+		if (db) {
+			const s = await db.getSettings();
+			return s;
+		}
+		return undefined;
+	});
 	createEffect(async () => {
 		if (db) {
 			const s = await db.getSettings();

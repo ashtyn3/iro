@@ -84,22 +84,11 @@ export function createTime(e: Engine) {
 		Timed,
 		Event("Time", TICKS_PER_SECOND, () => {
 			built.tick();
-		}).and("clock", TICKS_PER_MINUTE, () => {
-			const pad = (n: bigint) => n.toString().padStart(2, "0");
-			const calendar = `
-=========================
-   Year:   ${pad(built.Year)}
-   Month:  ${pad(built.Month)}
-   Day:    ${pad(built.Day)}
-   Season: ${built.Season}
--------------------------
-   ${pad(built.Hour)}:${pad(built.Minute)}:${pad(built.Second)}
-=========================
-`;
-			console.log(calendar);
 		}),
 	);
 
 	const final = builder.build();
 	return final;
 }
+
+export interface Atmosphere extends Existable {}
