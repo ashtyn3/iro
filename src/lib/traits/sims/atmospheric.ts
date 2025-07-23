@@ -6,7 +6,8 @@ import { Syncable } from "../../sync";
 import { type Entity, Event, Name, Named, Storeable, Timed } from "..";
 import type { Existable } from "../types";
 
-const TICKS_PER_SECOND = import.meta.env.DEV ? 1 : 3;
+// const TICKS_PER_SECOND = import.meta.env.DEV ? 1 : 3;
+const TICKS_PER_SECOND = 3;
 const TICKS_PER_MINUTE = TICKS_PER_SECOND * (TICKS_PER_SECOND * 2);
 const TICKS_PER_HOUR = TICKS_PER_MINUTE * TICKS_PER_SECOND;
 
@@ -78,12 +79,14 @@ export function createTime(e: Engine) {
 		.add(Named, { name: "time" })
 		.add(Time, {})
 		.add(Storeable, "time")
+		.add(Syncable, "time")
 		.build();
 
 	const builder = new EntityBuilder(built).add(
 		Timed,
 		Event("Time", TICKS_PER_SECOND, () => {
 			built.tick();
+			built.update({ ...built });
 		}),
 	);
 
@@ -92,3 +95,8 @@ export function createTime(e: Engine) {
 }
 
 export interface Atmosphere extends Existable {}
+
+export const Atmosphere: Component<Atmosphere, {}> = (base, init) => {
+	const e = base as Existable & Atmosphere;
+	return e;
+};

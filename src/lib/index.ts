@@ -45,7 +45,7 @@ export class Engine {
 	debug: Debug;
 	infoMenu: MenuHolder;
 	mouse: MouseMoveListener;
-	time!: Time & Storeable & Timed;
+	time!: Time & Storeable & Timed & Syncable;
 
 	constructor(w: number, h: number, convex: ConvexClient) {
 		this.width = w;

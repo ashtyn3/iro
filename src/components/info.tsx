@@ -3,6 +3,7 @@ import { createStore } from "solid-js/store";
 import { type Tile, TileKinds, VIEWPORT } from "~/lib/map";
 import type { PlayerType } from "~/lib/player";
 import { Vec2d } from "~/lib/state";
+import type { Time } from "~/lib/traits/sims/atmospheric";
 import type { Engine } from "../lib";
 import Button from "./Button";
 
@@ -132,15 +133,14 @@ const StatsTab = ({ engine, tile }: TabContentProps) => {
 };
 
 const TimelineTab = ({ engine, tile }: TabContentProps) => {
+	const time = () => engine.time.value();
 	return (
 		<div class="p-4">
 			<h3 class="text-lg font-bold mb-2">Timeline</h3>
 			<div class="space-y-2">
 				<p>
-					<strong>Clock State:</strong> {engine.clockSystem.state}
-				</p>
-				<p>
-					<strong>Engine Cycles:</strong> {engine.cycles}
+					<strong>Current time:</strong>{" "}
+					{`${time().Hour.toString().padStart(2, "0")}:${time().Minute.toString().padStart(2, "0")}:${time().Second.toString().padStart(2, "0")}`}
 				</p>
 			</div>
 		</div>
