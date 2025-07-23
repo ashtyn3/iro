@@ -170,7 +170,7 @@ export default function Info({ engine }: { engine: Engine }) {
 	const [tabs, setTabs] = createStore([
 		{
 			name: "close" as TabName,
-			label: "Close",
+			label: "X",
 			component: () => null,
 			active: false,
 		},

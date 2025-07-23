@@ -12,7 +12,7 @@ export interface Storeable extends Entity {
 	id: string;
 	serialize: () => any;
 	deserialize: (data: any) => void;
-	sync: () => Promise<void>;
+	sync: () => Promise<Entity>;
 }
 
 export const Storeable: Component<Storeable, string> = (base, init) => {
@@ -26,8 +26,9 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 			e.id,
 		);
 		if (state) {
-			deserializeEntity(e.engine, SuperJSON.parse(state), e);
+			return deserializeEntity(e.engine, SuperJSON.parse(state), e);
 		}
+		return e;
 	};
 
 	e.serialize = () => {

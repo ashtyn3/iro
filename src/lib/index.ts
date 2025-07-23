@@ -22,7 +22,9 @@ import { Fire } from "./objects/fire";
 import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
 import { type State, Vec2d } from "./state";
-import { Renderable } from "./traits";
+import type { Syncable } from "./sync";
+import { Renderable, type Storeable, type Timed } from "./traits";
+import { createTime, type Time } from "./traits/sims/atmospheric";
 
 export class Engine {
 	width: number;
@@ -43,6 +45,7 @@ export class Engine {
 	debug: Debug;
 	infoMenu: MenuHolder;
 	mouse: MouseMoveListener;
+	time!: Time & Storeable & Timed;
 
 	constructor(w: number, h: number, convex: ConvexClient) {
 		this.width = w;
@@ -98,9 +101,11 @@ export class Engine {
 
 		this.infoMenu = infoMenu.build();
 		this.mouse = createMouseMoveListener(this);
+		this.time = createTime(this);
 	}
 
 	async start() {
+		await this.time.sync();
 		await this.player.sync();
 		this.player.update({ ...this.player });
 		const actor = {

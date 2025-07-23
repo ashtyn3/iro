@@ -338,30 +338,11 @@ export function deserializeEntity(
 	data: any,
 	existingEntity?: Entity,
 ): Entity {
-	if (data.name === "player") {
-		const existingPlayer = EntityRegistry.instance.lookupByName("player");
-		if (existingPlayer) {
-			Object.assign(existingPlayer, data);
-			return existingPlayer;
-		} else {
-			return Player(engine, data.char || "@", data.dominant || "right");
-		}
-	} else if (data.name === "fire") {
-		const existingFire = EntityRegistry.instance.lookupByName("fire");
-		if (existingFire) {
-			Object.assign(existingFire, data);
-			return existingFire;
-		} else {
-			return Fire(engine, data.position);
-		}
-	} else if (data.name === "dark_thing") {
-		const existingDarkThing =
-			EntityRegistry.instance.lookupByName("dark_thing");
-		if (existingDarkThing) {
-			Object.assign(existingDarkThing, data);
-			return existingDarkThing;
-		} else {
-			return DarkThing(engine, data.position);
+	if (data.name) {
+		const existingEntity = EntityRegistry.instance.lookupByName(data.name);
+		if (existingEntity) {
+			Object.assign(existingEntity, data);
+			return existingEntity;
 		}
 	}
 
