@@ -1,0 +1,42 @@
+{
+  "prefixes": [
+    "Ferr", "Cupr", "Aur", "Arg", "Plumb", "Stann", "Zinc", "Titan",
+    "Chrom", "Mangan", "Cobalt", "Nickel", "Alum", "Magnes", "Calc", "Silic",
+    "Carb", "Sulf", "Phosph", "Nitr", "Bor", "Fluor", "Chlor", "Brom",
+    "Iod", "Lith", "Natr", "Potas", "Rubid", "Cesium", "Barium", "Stront",
+    "Radi", "Actin", "Lantha", "Cerium", "Praseo", "Neodym", "Samar", "Europ",
+    "Gadolin", "Terb", "Dyspros", "Holm", "Erbium", "Thul", "Ytterb", "Lutet",
+    "Hafn", "Tantal", "Tungst", "Rhen", "Osm", "Irid", "Platin", "Mercur",
+    "Thall", "Bismuth", "Polon", "Astatin", "Radon", "Franc", "Thorium", "Uranium",
+    "Void", "Shad", "Cryst", "Emb", "Frost", "Storm", "Star", "Lun",
+    "Sol", "Sang", "Oss", "Anim", "Spir", "Onir", "Nyx", "Chao",
+    "Ord", "Div", "Inf", "Cel", "Aby", "Eth", "Astr", "Phant",
+    "Wraith", "Spect", "Eldr", "Arc", "Myst", "Prim", "Anc", "Obsc",
+    "Drac", "Fey", "Dem", "Angel", "Necr"
+  ],
+  "middles": [
+    "a", "e", "i", "o", "u", "y", "ae", "ei", "ou", "ia", "eo", "au",
+    "an", "en", "in", "on", "un", "ar", "er", "ir", "or", "ur",
+    "al", "el", "il", "ol", "ul", "am", "em", "im", "om", "um",
+    "at", "et", "it", "ot", "ut", "av", "ev", "iv", "ov", "uv",
+    "ax", "ex", "ix", "ox", "ux", "az", "ez", "iz", "oz", "uz",
+    "yl", "yr", "ys", "yt", "yv", "yx", "yz", "th", "ph", "ch",
+    "sh", "gh", "rh", "wh", "ck", "ng", "nk", "mp", "nt", "nd",
+    "st", "sp", "sc", "sk", "sl", "sm", "sn", "sw", "tr", "dr",
+    "br", "cr", "fr", "gr", "pr", "bl", "cl", "fl", "gl", "pl",
+    "qu", "tw", "dw", "sw", "thr", "shr", "str", "spl", "spr", "scr"
+  ],
+  "finals": [
+    "ite", "ore", "ium", "ine", "ate", "ide", "ane", "ene", "yne", "ol",
+    "al", "ic", "ous", "ose", "ase", "ese", "ise", "use", "yte", "ute",
+    "ete", "ote", "ite", "ath", "eth", "ith", "oth", "uth", "yth", "ard",
+    "erd", "ird", "ord", "urd", "yrd", "ast", "est", "ist", "ost", "ust",
+    "yst", "ant", "ent", "int", "ont", "unt", "ynt", "and", "end", "ind",
+    "ond", "und", "ynd", "alk", "elk", "ilk", "olk", "ulk", "ylk", "arn",
+    "ern", "irn", "orn", "urn", "yrn", "arp", "erp", "irp", "orp", "urp",
+    "yrp", "art", "ert", "irt", "ort", "urt", "yrt", "ash", "esh", "ish",
+    "osh", "ush", "ysh", "ack", "eck", "ick", "ock", "uck", "yck", "ang",
+    "eng", "ing", "ong", "ung", "yng", "ank", "enk", "ink", "onk", "unk",
+    "ynk", "amp", "emp", "imp", "omp", "ump", "ymp", "stone", "rock", "gem"
+  ]
+}

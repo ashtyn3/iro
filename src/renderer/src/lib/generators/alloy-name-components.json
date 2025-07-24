@@ -1,0 +1,39 @@
+{
+  "prefixes": [
+    "Ferr", "Steel", "Iron", "Cupr", "Brass", "Bronz", "Aur", "Gold", "Arg", "Silv",
+    "Plat", "Pall", "Rhod", "Irid", "Osm", "Ruth", "Titan", "Alum", "Zinc", "Tin",
+    "Lead", "Nickel", "Cobalt", "Chrom", "Mangan", "Vanad", "Molyb", "Tungst", "Tantalum",
+    "Niob", "Zircon", "Hafn", "Rhen", "Techn", "Ruther", "Dubn", "Seab", "Bohr",
+    "Void", "Shad", "Dark", "Light", "Star", "Moon", "Sun", "Storm", "Frost", "Flame",
+    "Ember", "Cryst", "Prism", "Spec", "Lum", "Umbr", "Radi", "Puls", "Vibr", "Reson",
+    "Harm", "Disc", "Sync", "Async", "Quant", "Flux", "Vort", "Spir", "Helix", "Matr",
+    "Comp", "Hybrid", "Fus", "Blend", "Meld", "Weld", "Forg", "Cast", "Temper", "Anneal",
+    "Harden", "Tough", "Flex", "Elast", "Rigid", "Dense", "Light", "Heavy", "Pure", "Crude",
+    "Refin", "Raw", "Prim", "Adv", "Sup", "Ult", "Max", "Opt", "Perf", "Ideal"
+  ],
+  "middles": [
+    "a", "e", "i", "o", "u", "y", "ae", "ei", "ou", "ia", "eo", "au",
+    "an", "en", "in", "on", "un", "ar", "er", "ir", "or", "ur",
+    "al", "el", "il", "ol", "ul", "am", "em", "im", "om", "um",
+    "at", "et", "it", "ot", "ut", "av", "ev", "iv", "ov", "uv",
+    "ax", "ex", "ix", "ox", "ux", "az", "ez", "iz", "oz", "uz",
+    "yl", "yr", "ys", "yt", "yv", "yx", "yz", "th", "ph", "ch",
+    "sh", "gh", "rh", "wh", "ck", "ng", "nk", "mp", "nt", "nd",
+    "st", "sp", "sc", "sk", "sl", "sm", "sn", "sw", "tr", "dr",
+    "br", "cr", "fr", "gr", "pr", "bl", "cl", "fl", "gl", "pl",
+    "qu", "tw", "dw", "sw", "thr", "shr", "str", "spl", "spr", "scr"
+  ],
+  "finals": [
+    "oy", "alloy", "steel", "iron", "bronze", "brass", "gold", "silver", "metal",
+    "ium", "ine", "ate", "ide", "ane", "ene", "yne", "ol", "al", "ic",
+    "ous", "ose", "ase", "ese", "ise", "use", "yte", "ute", "ete", "ote",
+    "ite", "ath", "eth", "ith", "oth", "uth", "yth", "ard", "erd", "ird",
+    "ord", "urd", "yrd", "ast", "est", "ist", "ost", "ust", "yst", "ant",
+    "ent", "int", "ont", "unt", "ynt", "and", "end", "ind", "ond", "und",
+    "ynd", "alk", "elk", "ilk", "olk", "ulk", "ylk", "arn", "ern", "irn",
+    "orn", "urn", "yrn", "arp", "erp", "irp", "orp", "urp", "yrp", "art",
+    "ert", "irt", "ort", "urt", "yrt", "ash", "esh", "ish", "osh", "ush",
+    "ysh", "ack", "eck", "ick", "ock", "uck", "yck", "ang", "eng", "ing",
+    "ong", "ung", "yng", "ank", "enk", "ink", "onk", "unk", "ynk", "forge"
+  ]
+}
