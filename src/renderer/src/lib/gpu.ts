@@ -43,6 +43,9 @@ export class GPURenderer {
 		});
 		this.initialized = true;
 	}
+	public getDevice() {
+		return this.device;
+	}
 
 	private hexToInt(hex: string | null | undefined): number {
 		if (!hex) return 0;

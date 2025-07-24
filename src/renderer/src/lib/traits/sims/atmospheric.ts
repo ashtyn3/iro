@@ -1,4 +1,7 @@
+import { VIEWPORT } from "@renderer/lib/map";
 import * as Immutable from "immutable";
+import tgpu from "typegpu";
+import * as d from "typegpu/data";
 import type { Engine } from "~/lib";
 import type { Component } from "../../comps";
 import { createEntity, EntityBuilder } from "../../entity";
@@ -98,5 +101,17 @@ export interface Atmosphere extends Existable {}
 
 export const Atmosphere: Component<Atmosphere, {}> = (base, init) => {
 	const e = base as Existable & Atmosphere;
+	const device = e.engine.mapBuilder.gpu.getDevice();
+	const gpu = tgpu.initFromDevice({ device });
+	const fn = tgpu.fn(
+		[],
+		d.f32,
+	)(() => {
+		return 0;
+	});
+	const buffer = gpu.createBuffer(d.arrayOf(d.f32, VIEWPORT.x * VIEWPORT.y));
+	const computeFn = tgpu["~unstable"].computeFn({
+		workgroupSize: [1, 1, 1],
+	});
 	return e;
 };

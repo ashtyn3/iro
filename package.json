@@ -36,7 +36,9 @@
     "seedrandom": "^3.0.5",
     "simplex-noise": "^4.0.0",
     "superjson": "^2.0.0",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "typegpu": "^0.6.0",
+    "wgpu-matrix": "^3.4.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

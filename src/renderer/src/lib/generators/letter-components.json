@@ -1,0 +1,136 @@
+{
+    "audio": {
+        "greetings": {
+            "samples": [
+                {
+                    "sample_start": 0,
+                    "sample_end": 0.601
+                },
+                {
+                    "sample_start": 0.601,
+                    "sample_end": 1.563
+                },
+                {
+                    "sample_start": 1.563,
+                    "sample_end": 2.116
+                },
+                {
+                    "sample_start": 2.116,
+                    "sample_end": 2.847
+                },
+                {
+                    "sample_start": 2.847,
+                    "sample_end": 3.683
+                }
+            ]
+        },
+        "openings": {
+            "samples": [
+                {
+                    "sample_start": 0,
+                    "sample_end": 9.195
+                },
+                {
+                    "sample_start": 9.195,
+                    "sample_end": 17.972
+                },
+                {
+                    "sample_start": 17.972,
+                    "sample_end": 25.913
+                },
+                {
+                    "sample_start": 25.913,
+                    "sample_end": 34.299
+                },
+                {
+                    "sample_start": 34.299,
+                    "sample_end": 42.606
+                }
+            ]
+        },
+        "middles": {
+            "samples": [
+                {
+                    "sample_start": 0,
+                    "sample_end": 11.781
+                },
+                {
+                    "sample_start": 11.781,
+                    "sample_end": 21.943
+                },
+                {
+                    "sample_start": 21.943,
+                    "sample_end": 32.340
+                },
+                {
+                    "sample_start": 32.340,
+                    "sample_end": 43.337
+                },
+                {
+                    "sample_start": 43.337,
+                    "sample_end": 51.226
+                }
+            ]
+        },
+        "closings": [
+            {
+                "sample_start": 0,
+                "sample_end": 7.549
+            },
+            {
+                "sample_start": 7.549,
+                "sample_end": 15.804
+            },
+            {
+                "sample_start": 15.804,
+                "sample_end": 23.693
+            },
+            {
+                "sample_start": 23.693,
+                "sample_end": 31.660
+            },
+            {
+                "sample_start": 31.660,
+                "sample_end": 37.695
+            }
+        ],
+        "exit": {}
+    },
+    "game": {
+        "greetings": [
+            "Hi there,",
+            "Dear friend,",
+            "Hey,",
+            "Hello,",
+            "Hi,"
+        ],
+        "openings": [
+            "Power’s been unstable again. The city is running on backup most nights. Nothing new here.",
+            "Still in the same apartment. Rent went up again. AetherCorp’s ads are everywhere.",
+            "No changes here. The block is quiet. Most people keep to themselves.",
+            "The usual problems—transit delays, rolling blackouts, nothing fixed. Same as always.",
+            "Another week, same routine. No word from AetherCorp about anything useful."
+        ],
+        "middles": [
+            "AetherCorp says the transfer is possible if the quota is met. No one here believes it, but there aren’t other options.",
+            "The numbers they want keep going up. If you can send enough, maybe we’ll get out. Not counting on it.",
+            "Reports from the colony aren’t good. Accidents, long shifts, people leaving. AetherCorp doesn’t comment.",
+            "They say light energy is in demand. If you can keep up, maybe it’ll be enough. Don’t expect much from them.",
+            "Doing this for the transfer. AetherCorp’s terms change every month. Nothing guaranteed."
+        ],
+        "closings": [
+            "Send what you can. Don’t expect much in return. We’ll wait for updates.",
+            "Stay alert. Don’t trust what AetherCorp says. Let us know if anything changes.",
+            "We’ll be here. If the transfer happens, fine. If not, nothing new.",
+            "Do what you need to. Don’t take risks for their promises. We’ll manage.",
+            "Keep working if you have to. Don’t expect AetherCorp to make it easy."
+        ],
+        "exit": [
+            "Take care,\nYour family",
+            "Love,\nYour family",
+            "See you soon,\nYour family",
+            "All the best,\nYour family",
+            "Hang in there,\nYour family"
+        ]
+    }
+}

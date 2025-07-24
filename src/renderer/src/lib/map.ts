@@ -1,4 +1,5 @@
 import { Set as ImmutableSet } from "immutable";
+import { nanoid } from "nanoid";
 import seedrandom from "seedrandom";
 import { createNoise2D } from "simplex-noise";
 import { createSignal, from } from "solid-js";
@@ -70,7 +71,9 @@ export interface Tile {
 		char: string;
 	} | null;
 	promotable?: promotion;
-	oreName?: string; // For dynamic ore color lookup
+	oreName?: string;
+	elevation: number;
+	temperature: number;
 }
 
 export class GMap {
@@ -194,7 +197,7 @@ export class GMap {
 
 		try {
 			const db = new DB(this.storage);
-			const BATCH_SIZE = 200; // Smaller batches for more reliable processing
+			const BATCH_SIZE = 200; 
 			const queueToProcess = [...this.writeQueue]; // Create a copy to process
 			const clusterOpsToProcess = [...this.clusterQueue]; // Copy cluster operations
 			this.writeQueue = []; // Clear the queue immediately to accept new updates
@@ -283,7 +286,7 @@ export class GMap {
 		// Only generate ore materials for now
 		this.materials = [];
 		for (let i = 0; i < 10; i++) {
-			this.materials.push(makeMaterial(`${this.mapId}-ore-${i}`, "ore"));
+			this.materials.push(makeMaterial(`${nanoid()}-ore-${i}`, "ore"));
 		}
 
 		if (!Array.isArray(this.materials)) {
@@ -334,6 +337,7 @@ export class GMap {
 					boundary: false,
 					mask: null,
 					kind: TileKinds.grass,
+					elevation: elev,
 				};
 
 				if (elev <= 0) {
@@ -447,7 +451,7 @@ export class GMap {
 				const sy = Math.floor(rng() * this.height);
 
 				const deposit = this.growDeposit(sx, sy, targetCells, expandProb, rng);
-				for (const cell of deposit.values()) {
+				for (const cell of Array.from(deposit.values())) {
 					const [x, y] = cell.split("-").map(Number);
 					const tile = this.tiles[x][y];
 					if (tile.kind === TileKinds.rock) {
@@ -482,9 +486,9 @@ export class GMap {
 		const db = new DB(this.storage);
 		this.tiles = await db.loadTiles(id);
 		const clusters = await db.loadClusters(id);
-		
+
 		this.engine.debug.info(`Loaded clusters for map ${id}:`, clusters);
-		
+
 		this.computedClusters = clusters || {
 			[TileKinds.grass]: [],
 			[TileKinds.water]: [],
@@ -535,9 +539,12 @@ export class GMap {
 	async buildClusters() {
 		this.engine.debug.info("Starting cluster building...");
 		this.computedClusters = await this.findClusters();
-		this.engine.debug.info("Cluster building completed:", this.computedClusters);
+		this.engine.debug.info(
+			"Cluster building completed:",
+			this.computedClusters,
+		);
 		const db = new DB(this.storage);
-		const name = generateMapName(this.mapId);
+		const name = generateMapName(nanoid());
 		this.mapId = await db.saveTileHeader(this.width, this.height, name);
 		this.buildClusterIndex();
 		this.engine.scheduler.add(
@@ -985,7 +992,7 @@ export class GMap {
 			return this.findClustersSync();
 		}
 	}
-	
+
 	// Synchronous fallback for when workers fail
 	private findClustersSync(): Clusters {
 		const clusters: Clusters = {
@@ -1003,38 +1010,38 @@ export class GMap {
 
 		// Simple synchronous clustering
 		const visited = new Set<string>();
-		
+
 		for (let x = 0; x < this.width; x++) {
 			for (let y = 0; y < this.height; y++) {
 				const key = `${x},${y}`;
 				if (visited.has(key)) continue;
-				
+
 				const tile = this.tiles[x][y];
 				if (!tile) continue;
-				
+
 				const effectiveKind = this.getEffectiveKind(tile);
 				if (effectiveKind === TileKinds.grass && !tile.mask) continue;
-				
+
 				// Simple flood fill to find connected tiles
 				const clusterPoints: Vec2d[] = [];
 				const queue: Vec2d[] = [Vec2d({ x, y })];
-				
+
 				while (queue.length > 0) {
 					const current = queue.shift()!;
 					const currentKey = `${current.x},${current.y}`;
-					
+
 					if (visited.has(currentKey)) continue;
 					visited.add(currentKey);
-					
+
 					const currentTile = this.tiles[current.x][current.y];
 					if (!currentTile) continue;
-					
+
 					const currentKind = this.getEffectiveKind(currentTile);
 					if (currentKind !== effectiveKind) continue;
 					if (currentKind === TileKinds.grass && !currentTile.mask) continue;
-					
+
 					clusterPoints.push(current);
-					
+
 					// Add neighbors
 					const neighbors = [
 						Vec2d({ x: current.x - 1, y: current.y }),
@@ -1042,15 +1049,19 @@ export class GMap {
 						Vec2d({ x: current.x, y: current.y - 1 }),
 						Vec2d({ x: current.x, y: current.y + 1 }),
 					];
-					
+
 					for (const neighbor of neighbors) {
-						if (neighbor.x >= 0 && neighbor.x < this.width && 
-							neighbor.y >= 0 && neighbor.y < this.height) {
+						if (
+							neighbor.x >= 0 &&
+							neighbor.x < this.width &&
+							neighbor.y >= 0 &&
+							neighbor.y < this.height
+						) {
 							queue.push(neighbor);
 						}
 					}
 				}
-				
+
 				if (clusterPoints.length > 0) {
 					const sumX = clusterPoints.reduce((sum, p) => sum + p.x, 0);
 					const sumY = clusterPoints.reduce((sum, p) => sum + p.y, 0);
@@ -1058,28 +1069,31 @@ export class GMap {
 						x: Math.floor(sumX / clusterPoints.length),
 						y: Math.floor(sumY / clusterPoints.length),
 					};
-					
+
 					const cluster: Cluster = {
 						kind: effectiveKind,
 						points: clusterPoints,
 						center,
 					};
-					
+
 					(clusters[effectiveKind] as Cluster[]).push(cluster);
 				}
 			}
 		}
-		
+
 		return clusters;
 	}
-	
+
 	private getEffectiveKind(tile: Tile): TileKinds {
-		if (tile.mask?.kind === TileKinds.wood || tile.mask?.kind === TileKinds.leafs) {
+		if (
+			tile.mask?.kind === TileKinds.wood ||
+			tile.mask?.kind === TileKinds.leafs
+		) {
 			return TileKinds.tree;
 		}
 		return tile.mask?.kind || tile.kind;
 	}
-	
+
 	private async processClusterRemoval(clusterToRemove: Cluster): Promise<void> {
 		if (!clusterToRemove) return;
 
