@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { decode, encode } from "@msgpack/msgpack";
 import { nanoid } from "nanoid";
@@ -12,10 +13,21 @@ export enum StoreType {
 	Entities = "entities",
 }
 
+// Get the appropriate data directory for the app
+function getDataDirectory(): string {
+	// In development, use current directory
+	if (process.env.NODE_ENV === "development") {
+		return "./data";
+	}
+
+	// In production, use the user's home directory with app name
+	return path.join(os.homedir(), "iro", "data");
+}
+
 const DIR_MAPPING: Record<StoreType, string> = {
-	[StoreType.Map]: "./data/maps",
-	[StoreType.Settings]: "./data/settings",
-	[StoreType.Entities]: "./data/entities",
+	[StoreType.Map]: path.join(getDataDirectory(), "maps"),
+	[StoreType.Settings]: path.join(getDataDirectory(), "settings"),
+	[StoreType.Entities]: path.join(getDataDirectory(), "entities"),
 };
 
 function encodeToArrayBuffer(data: any): ArrayBuffer {
@@ -41,7 +53,9 @@ async function compressGzip(data: ArrayBuffer): Promise<ArrayBuffer> {
 }
 
 // Helper function for decompression
-async function decompressGzip(compressedBuffer: ArrayBuffer): Promise<ArrayBuffer> {
+async function decompressGzip(
+	compressedBuffer: ArrayBuffer,
+): Promise<ArrayBuffer> {
 	const decompressor = new DecompressionStream("gzip");
 	const writer = decompressor.writable.getWriter();
 	writer.write(compressedBuffer);
@@ -68,10 +82,23 @@ export class Storage {
 	}
 
 	private ensureMappings() {
-		for (const type of Object.values(StoreType)) {
-			const dir = DIR_MAPPING[type];
-			if (!fs.existsSync(dir)) {
-				fs.mkdirSync(dir, { recursive: true });
+		try {
+			for (const type of Object.values(StoreType)) {
+				const dir = DIR_MAPPING[type];
+				if (!fs.existsSync(dir)) {
+					fs.mkdirSync(dir, { recursive: true });
+				}
+			}
+		} catch (error) {
+			console.error("Failed to create data directories:", error);
+			// Try to create at least the base directory
+			try {
+				const baseDir = getDataDirectory();
+				if (!fs.existsSync(baseDir)) {
+					fs.mkdirSync(baseDir, { recursive: true });
+				}
+			} catch (fallbackError) {
+				console.error("Failed to create fallback directory:", fallbackError);
 			}
 		}
 	}
@@ -79,7 +106,7 @@ export class Storage {
 	public async createTileSet({
 		width,
 		height,
-		name
+		name,
 	}: {
 		width: number;
 		height: number;
@@ -91,7 +118,12 @@ export class Storage {
 		fs.mkdirSync(mapPath, { recursive: true });
 		fs.writeFileSync(
 			path.join(mapPath, "map.data"),
-			JSON.stringify({ width, height, name, createdAt: new Date().toISOString() }),
+			JSON.stringify({
+				width,
+				height,
+				name,
+				createdAt: new Date().toISOString(),
+			}),
 		);
 		return mapId;
 	}
@@ -168,19 +200,23 @@ export class Storage {
 
 			try {
 				// Find the specific block we need
-				const block = blocks.find((b: any) => b.blockX === bx && b.blockY === by);
+				const block = blocks.find(
+					(b: any) => b.blockX === bx && b.blockY === by,
+				);
 				let blockData: any[][];
 
 				if (!block) {
 					// Block doesn't exist, create a new empty block
-					console.log(`Block (${bx},${by}) not found, creating new empty block`);
+					console.log(
+						`Block (${bx},${by}) not found, creating new empty block`,
+					);
 					blockData = Array.from({ length: blockSize }, () =>
 						Array.from({ length: blockSize }, () => ({
 							char: " ",
 							kind: 0,
 							boundary: false,
 							mask: null,
-						}))
+						})),
 					);
 				} else {
 					// Try to decompress and decode the existing block
@@ -191,7 +227,9 @@ export class Storage {
 						// Fallback: try legacy ZSTD format
 						try {
 							const dataBytes = new Uint8Array(block.data);
-							const zstd = await (await import("@oneidentity/zstd-js")).ZstdInit();
+							const zstd = await (
+								await import("@oneidentity/zstd-js")
+							).ZstdInit();
 							const decompressedData = zstd.ZstdSimple.decompress(dataBytes);
 							blockData = decode(decompressedData) as any[][];
 						} catch (zstdError) {
@@ -200,14 +238,16 @@ export class Storage {
 								blockData = JSON.parse(new TextDecoder().decode(block.data));
 							} catch (jsonError) {
 								// Create new empty block if all decompression methods fail
-								console.log(`Block (${bx},${by}) data is corrupted, creating new empty block`);
+								console.log(
+									`Block (${bx},${by}) data is corrupted, creating new empty block`,
+								);
 								blockData = Array.from({ length: blockSize }, () =>
 									Array.from({ length: blockSize }, () => ({
 										char: " ",
 										kind: 0,
 										boundary: false,
 										mask: null,
-									}))
+									})),
 								);
 							}
 						}
@@ -223,10 +263,12 @@ export class Storage {
 
 				// Re-compress and save the updated block
 				const encodedData = encode(blockData);
-				const compressedData = await compressGzip(encodedData.buffer.slice(
-					encodedData.byteOffset,
-					encodedData.byteOffset + encodedData.byteLength,
-				));
+				const compressedData = await compressGzip(
+					encodedData.buffer.slice(
+						encodedData.byteOffset,
+						encodedData.byteOffset + encodedData.byteLength,
+					),
+				);
 
 				const filePath = path.join(mapPath, `BLK.${bx}.${by}.data`);
 				const blockForEncoding = {
@@ -380,7 +422,7 @@ export class Storage {
 			const kind = parseInt(kindKey);
 			const filePath = path.join(mapPath, `CLUSTER.${kind}.data`);
 			const serialized = SuperJSON.stringify(clusterGroup);
-			fs.writeFileSync(filePath, serialized, 'utf8');
+			fs.writeFileSync(filePath, serialized, "utf8");
 		}
 	}
 
@@ -392,7 +434,7 @@ export class Storage {
 		files.forEach((file) => {
 			if (file.startsWith("CLUSTER.")) {
 				const filePath = path.join(mapPath, file);
-				const data = fs.readFileSync(filePath, 'utf8');
+				const data = fs.readFileSync(filePath, "utf8");
 				const kind = parseInt(file.split(".")[1]);
 				try {
 					const clusterGroup = SuperJSON.parse(data) as Cluster[];
@@ -434,12 +476,12 @@ export class Storage {
 			if (existingByKind.has(kind)) {
 				// Update existing cluster
 				const filePath = path.join(mapPath, fileName);
-				fs.writeFileSync(filePath, serialized, 'utf8');
+				fs.writeFileSync(filePath, serialized, "utf8");
 				existingByKind.delete(kind);
 			} else {
 				// Create new cluster
 				const filePath = path.join(mapPath, fileName);
-				fs.writeFileSync(filePath, serialized, 'utf8');
+				fs.writeFileSync(filePath, serialized, "utf8");
 			}
 		}
 
@@ -487,15 +529,15 @@ export class Storage {
 
 	public async clearEntityStates(tileSetId: string) {
 		const entityPath = path.join(DIR_MAPPING[StoreType.Entities], tileSetId);
-		
+
 		// Check if the entity directory exists before trying to read it
 		if (!fs.existsSync(entityPath)) {
 			// Entity directory doesn't exist, which is fine - no entities to delete
 			return;
 		}
-		
+
 		const files = fs.readdirSync(entityPath);
-		
+
 		for (const file of files) {
 			if (file.startsWith("ENTITY.")) {
 				const filePath = path.join(entityPath, file);
@@ -578,7 +620,7 @@ export class Storage {
 	public async death(tileSetId: string) {
 		// Clear entity states FIRST (before any directory deletion)
 		await this.clearEntityStates(tileSetId);
-		
+
 		// Clear all blocks for this tileset
 		const mapPath = path.join(DIR_MAPPING[StoreType.Map], tileSetId);
 		if (fs.existsSync(mapPath)) {

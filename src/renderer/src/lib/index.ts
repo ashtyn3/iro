@@ -53,11 +53,11 @@ export class Engine {
 		this.height = h;
 		this.storage = storage;
 
-		if (import.meta.env.DEV) {
-			this.debug = Debug.getInstance(this, { logLevel: "debug" });
-		} else {
-			this.debug = Debug.getInstance(this, { logLevel: "prod" });
-		}
+		// if (import.meta.env.DEV) {
+		this.debug = Debug.getInstance(this, { logLevel: "debug" });
+		// } else {
+		// 	this.debug = Debug.getInstance(this, { logLevel: "prod" });
+		// }
 		this.debug.prod(
 			"Iro is open source! https://github.com/ashtyn3/iro go peep the code over there!",
 		);
@@ -70,7 +70,7 @@ export class Engine {
 			width: TILES_X,
 			height: TILES_Y,
 			fontSize: FONT_PX,
-			fontFamily: "MorePerfectDOSVGA",
+			fontFamily: "MorePerfectDOSVGA, Courier New, Courier, Consolas, Monaco, Lucida Console, monospace",
 			forceSquareRatio: true,
 		});
 

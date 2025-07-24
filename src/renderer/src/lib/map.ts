@@ -482,6 +482,9 @@ export class GMap {
 		const db = new DB(this.storage);
 		this.tiles = await db.loadTiles(id);
 		const clusters = await db.loadClusters(id);
+		
+		this.engine.debug.info(`Loaded clusters for map ${id}:`, clusters);
+		
 		this.computedClusters = clusters || {
 			[TileKinds.grass]: [],
 			[TileKinds.water]: [],
@@ -530,8 +533,9 @@ export class GMap {
 	}
 
 	async buildClusters() {
+		this.engine.debug.info("Starting cluster building...");
 		this.computedClusters = await this.findClusters();
-		this.engine.debug.info("done workers");
+		this.engine.debug.info("Cluster building completed:", this.computedClusters);
 		const db = new DB(this.storage);
 		const name = generateMapName(this.mapId);
 		this.mapId = await db.saveTileHeader(this.width, this.height, name);
@@ -977,10 +981,105 @@ export class GMap {
 			this.engine.debug.warn(
 				`Worker clustering failed, falling back to synchronous: ${error}`,
 			);
+			// Fallback: synchronous clustering for production builds
+			return this.findClustersSync();
 		}
-		// Fallback: always return clusters object
+	}
+	
+	// Synchronous fallback for when workers fail
+	private findClustersSync(): Clusters {
+		const clusters: Clusters = {
+			[TileKinds.grass]: [],
+			[TileKinds.water]: [],
+			[TileKinds.rock]: [],
+			[TileKinds.copper]: [],
+			[TileKinds.wood]: [],
+			[TileKinds.leafs]: [],
+			[TileKinds.struct]: [],
+			[TileKinds.tree]: [],
+			[TileKinds.berry]: [],
+			[TileKinds.ore]: [],
+		};
+
+		// Simple synchronous clustering
+		const visited = new Set<string>();
+		
+		for (let x = 0; x < this.width; x++) {
+			for (let y = 0; y < this.height; y++) {
+				const key = `${x},${y}`;
+				if (visited.has(key)) continue;
+				
+				const tile = this.tiles[x][y];
+				if (!tile) continue;
+				
+				const effectiveKind = this.getEffectiveKind(tile);
+				if (effectiveKind === TileKinds.grass && !tile.mask) continue;
+				
+				// Simple flood fill to find connected tiles
+				const clusterPoints: Vec2d[] = [];
+				const queue: Vec2d[] = [Vec2d({ x, y })];
+				
+				while (queue.length > 0) {
+					const current = queue.shift()!;
+					const currentKey = `${current.x},${current.y}`;
+					
+					if (visited.has(currentKey)) continue;
+					visited.add(currentKey);
+					
+					const currentTile = this.tiles[current.x][current.y];
+					if (!currentTile) continue;
+					
+					const currentKind = this.getEffectiveKind(currentTile);
+					if (currentKind !== effectiveKind) continue;
+					if (currentKind === TileKinds.grass && !currentTile.mask) continue;
+					
+					clusterPoints.push(current);
+					
+					// Add neighbors
+					const neighbors = [
+						Vec2d({ x: current.x - 1, y: current.y }),
+						Vec2d({ x: current.x + 1, y: current.y }),
+						Vec2d({ x: current.x, y: current.y - 1 }),
+						Vec2d({ x: current.x, y: current.y + 1 }),
+					];
+					
+					for (const neighbor of neighbors) {
+						if (neighbor.x >= 0 && neighbor.x < this.width && 
+							neighbor.y >= 0 && neighbor.y < this.height) {
+							queue.push(neighbor);
+						}
+					}
+				}
+				
+				if (clusterPoints.length > 0) {
+					const sumX = clusterPoints.reduce((sum, p) => sum + p.x, 0);
+					const sumY = clusterPoints.reduce((sum, p) => sum + p.y, 0);
+					const center = {
+						x: Math.floor(sumX / clusterPoints.length),
+						y: Math.floor(sumY / clusterPoints.length),
+					};
+					
+					const cluster: Cluster = {
+						kind: effectiveKind,
+						points: clusterPoints,
+						center,
+					};
+					
+					(clusters[effectiveKind] as Cluster[]).push(cluster);
+				}
+			}
+		}
+		
 		return clusters;
 	}
+	
+	private getEffectiveKind(tile: Tile): TileKinds {
+		if (tile.mask?.kind === TileKinds.wood || tile.mask?.kind === TileKinds.leafs) {
+			return TileKinds.tree;
+		}
+		return tile.mask?.kind || tile.kind;
+	}
+	
 	private async processClusterRemoval(clusterToRemove: Cluster): Promise<void> {
 		if (!clusterToRemove) return;
 
@@ -1006,7 +1105,7 @@ export class GMap {
 		}
 
 		// 3. Save the updated clusters object to the database
-		const db = new DB(this.convex);
+		const db = new DB(this.storage);
 		await db.updateClusters(this.mapId, this.computedClusters);
 		this.engine.debug.info(
 			`Updated clusters in database for mapId: ${this.mapId}`,
@@ -1028,7 +1127,9 @@ export class GMap {
 		endX: number,
 	): Promise<Map<number, Array<{ x: number; y: number; kind: number }>>> {
 		return new Promise((resolve, reject) => {
-			const worker = new Worker("/worker.js");
+			// Use relative path for worker in production builds
+			const workerPath = import.meta.env.DEV ? "/worker.js" : "./worker.js";
+			const worker = new Worker(workerPath);
 			const taskId = Math.random().toString(36).substr(2, 9);
 
 			// Extract tile chunk

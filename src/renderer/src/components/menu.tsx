@@ -64,7 +64,6 @@ export default function Menu() {
 	};
 
 	const handleLoadGame = async (tileSetId: string) => {
-		if (!tileSetId) return;
 		setCurrentState("loading");
 		try {
 			const storage = Storage.instance;
