@@ -8,19 +8,19 @@
                 },
                 {
                     "sample_start": 0.601,
-                    "sample_end": 1.563
+                    "sample_end": 0.962
                 },
                 {
                     "sample_start": 1.563,
-                    "sample_end": 2.116
+                    "sample_end": 0.553
                 },
                 {
                     "sample_start": 2.116,
-                    "sample_end": 2.847
+                    "sample_end": 0.731
                 },
                 {
                     "sample_start": 2.847,
-                    "sample_end": 3.683
+                    "sample_end": 0.836
                 }
             ]
         },
@@ -32,19 +32,19 @@
                 },
                 {
                     "sample_start": 9.195,
-                    "sample_end": 17.972
+                    "sample_end": 8.777
                 },
                 {
                     "sample_start": 17.972,
-                    "sample_end": 25.913
+                    "sample_end": 7.941
                 },
                 {
                     "sample_start": 25.913,
-                    "sample_end": 34.299
+                    "sample_end": 8.386
                 },
                 {
                     "sample_start": 34.299,
-                    "sample_end": 42.606
+                    "sample_end": 8.307
                 }
             ]
         },
@@ -56,19 +56,19 @@
                 },
                 {
                     "sample_start": 11.781,
-                    "sample_end": 21.943
+                    "sample_end": 10.162
                 },
                 {
                     "sample_start": 21.943,
-                    "sample_end": 32.340
+                    "sample_end": 10.397
                 },
                 {
                     "sample_start": 32.340,
-                    "sample_end": 43.337
+                    "sample_end": 10.997
                 },
                 {
                     "sample_start": 43.337,
-                    "sample_end": 51.226
+                    "sample_end": 7.889
                 }
             ]
         },
@@ -80,19 +80,19 @@
                 },
                 {
                     "sample_start": 7.549,
-                    "sample_end": 15.804
+                    "sample_end": 8.255
                 },
                 {
                     "sample_start": 15.804,
-                    "sample_end": 23.693
+                    "sample_end": 7.889
                 },
                 {
                     "sample_start": 23.693,
-                    "sample_end": 31.660
+                    "sample_end": 7.967
                 },
                 {
                     "sample_start": 31.660,
-                    "sample_end": 37.695
+                    "sample_end": 6.035
                 }
             ]
         },

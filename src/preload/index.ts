@@ -11,26 +11,27 @@ const storageAPI: StorageAPI = {
 	createTileSet: storage.createTileSet.bind(storage),
 	getAllMaps: storage.getAllMaps.bind(storage),
 
-	
 	// Block operations
 	insertTileBlocks: storage.insertTileBlocks.bind(storage),
 	updateViewportTiles: storage.updateViewportTiles.bind(storage),
 	loadMapContent: storage.loadMapContent.bind(storage),
-	
+	loadMapHeader: storage.loadMapHeader.bind(storage),
+	updateMapHeader: storage.updateMapHeader.bind(storage),
+
 	// Cluster operations
 	saveClusters: storage.saveClusters.bind(storage),
 	loadCluster: storage.loadCluster.bind(storage),
 	clusterUpdate: storage.clusterUpdate.bind(storage),
-	
+
 	// Entity operations
 	saveEntityState: storage.saveEntityState.bind(storage),
 	getEntityState: storage.getEntityState.bind(storage),
 	clearEntityStates: storage.clearEntityStates.bind(storage),
-	
+
 	// Cleanup operations
 	clearUserData: storage.clearUserData.bind(storage),
 	death: storage.death.bind(storage),
-	
+
 	// Settings operations
 	hasSettings: storage.hasSettings.bind(storage),
 	getSettings: storage.getSettings.bind(storage),

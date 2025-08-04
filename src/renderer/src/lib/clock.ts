@@ -31,13 +31,15 @@ export class Clock {
 	toggle() {
 		this.state = this.state === "running" ? "paused" : "running";
 		if (this.state === "paused") {
-			if (this.engine.audio.score.playing()) {
+			if (this.engine.audio?.score.playing()) {
 				this.engine.audio.score.stop();
+				Howler.ctx.suspend();
 			}
 			this.engine.menuHolder.setMenu(() => Pause({ engine: this.engine }));
 		} else {
-			if (!this.engine.audio.score.playing()) {
-				this.engine.audio.score.play();
+			if (!this.engine.audio?.score.playing()) {
+				this.engine.audio?.score.play();
+				Howler.ctx.resume();
 			}
 			this.engine.menuHolder.menuOff();
 		}

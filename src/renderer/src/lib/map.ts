@@ -17,7 +17,13 @@ import type { Engine } from "./index";
 import { DB } from "./state";
 import type { Storage } from "./storage";
 import { LightEmitter, type LightSource, Movable } from "./traits";
-import { Vec2d } from "./types";
+import {
+	type MapGenerationResult,
+	type MapInfo,
+	type TileUpdate,
+	Vec2d,
+	type Viewport,
+} from "./types";
 
 const COLORS = () => MaterialRegistry.instance.colors();
 
@@ -42,7 +48,7 @@ export const CELL_AREA_KM2 = (CELL_SIZE / 1000) ** 2;
 export type Cluster = {
 	kind: TileKinds;
 	points: Vec2d[];
-	center: { x: number; y: number };
+	center: Vec2d;
 };
 
 export type Clusters = {
@@ -88,13 +94,14 @@ export class GMap {
 	map: number[][];
 	engine: Engine;
 	tiles: Tile[][];
+	mapHeader: MapInfo;
 	computedClusters: Clusters;
 	gpu: GPURenderer;
 	useGPU: boolean;
 	mapId: string;
 	storage: Storage;
 	saved: boolean;
-	writeQueue: { x: number; y: number; tile: Tile }[];
+	writeQueue: TileUpdate[];
 	clusterQueue: { operation: "remove"; cluster: Cluster }[] = [];
 	materials: Material[];
 	mapAreaKm2: number;
@@ -132,9 +139,21 @@ export class GMap {
 		this.clusterQueue = [];
 		this.materials = [];
 		this.mapAreaKm2 = w * h * CELL_AREA_KM2;
+		this.mapHeader = {
+			id: "",
+			createdAt: "",
+			width: w,
+			height: h,
+			name: "",
+			letter: {
+				letter: [],
+				sprites: [],
+			},
+			progress: { letter: false },
+		};
 	}
 
-	getViewport(): { x: number; y: number; width: number; height: number } {
+	getViewport(): Viewport {
 		const vp = this.engine.viewport();
 		return {
 			x: vp.x,
@@ -278,7 +297,7 @@ export class GMap {
 			this.queueFlushTimer = null;
 		}, 2000);
 	}
-	async genMap(): Promise<{ state: boolean; message: string, letter?: {letter: string, greetingSample: {sample_start: number, sample_end: number}, openingSample: {sample_start: number, sample_end: number}, middleSample: {sample_start: number, sample_end: number}, closingSample: {sample_start: number, sample_end: number}} }> {
+	async genMap(): Promise<MapGenerationResult> {
 		const db = new DB(this.storage);
 		const canMakeMap = await db.canMakeMap();
 		if (!canMakeMap.state) {
@@ -339,6 +358,7 @@ export class GMap {
 					mask: null,
 					kind: TileKinds.grass,
 					elevation: elev,
+					temperature: 20, // Default temperature
 				};
 
 				if (elev <= 0) {
@@ -388,12 +408,11 @@ export class GMap {
 		}
 		this.engine.debug.info("finish map assignments");
 		this.orePass();
-		const letter = generateLetter(nanoid());
 		this.engine.debug.info("finish letter");
 		this.engine.debug.info("finish ore pass");
 		await this.buildClusters();
 		this.engine.debug.info("finish clusters");
-		return { state: true, message: "Map created", letter  };
+		return { state: true, message: "Map created" };
 	}
 	private samplePoisson(lambda: number, rng: seedrandom.PRNG): number {
 		const L = Math.exp(-lambda);
@@ -487,6 +506,12 @@ export class GMap {
 
 	public async loadMap(id: string): Promise<boolean> {
 		const db = new DB(this.storage);
+		const header = await db.fetchMapHeader(id);
+		if (!header) {
+			this.engine.debug.error(`Failed to load map header for map ${id}`);
+			return false;
+		}
+		this.mapHeader = header;
 		this.tiles = await db.loadTiles(id);
 		const clusters = await db.loadClusters(id);
 
@@ -540,15 +565,27 @@ export class GMap {
 	}
 
 	async buildClusters() {
-		this.engine.debug.info("Starting cluster building...");
 		this.computedClusters = await this.findClusters();
-		this.engine.debug.info(
-			"Cluster building completed:",
-			this.computedClusters,
-		);
 		const db = new DB(this.storage);
 		const name = generateMapName(nanoid());
-		this.mapId = await db.saveTileHeader(this.width, this.height, name);
+		const letter = generateLetter(nanoid());
+		this.mapHeader = {
+			id: nanoid(),
+			createdAt: new Date().toISOString(),
+			width: this.width,
+			height: this.height,
+			name,
+			letter,
+			progress: { letter: false },
+		};
+		this.mapId = await db.saveTileHeader(
+			this.mapHeader.id,
+			this.mapHeader.createdAt,
+			this.width,
+			this.height,
+			name,
+			letter,
+		);
 		this.buildClusterIndex();
 		this.engine.scheduler.add(
 			{
@@ -722,8 +759,8 @@ export class GMap {
 		for (const emitter of lightEmitters) {
 			const lightSource = emitter.getLightSource();
 			// Only include lights that might affect the viewport
-			const lightX = lightSource.x;
-			const lightY = lightSource.y;
+			const lightX = lightSource.position.x;
+			const lightY = lightSource.position.y;
 			const lightRadius = lightSource.radius;
 
 			const viewportRight = viewport.x + VIEWPORT.x;
@@ -785,8 +822,8 @@ export class GMap {
 		// Check if any light affects this tile
 		let hasLightInfluence = false;
 		for (const light of lights) {
-			const lightDx = worldX - light.x;
-			const lightDy = worldY - light.y;
+			const lightDx = worldX - light.position.x;
+			const lightDy = worldY - light.position.y;
 			const lightDist = Math.sqrt(lightDx * lightDx + lightDy * lightDy);
 			if (lightDist <= light.radius) {
 				hasLightInfluence = true;
@@ -813,8 +850,8 @@ export class GMap {
 
 		// Process each light source that affects this tile
 		for (const light of lights) {
-			const lightDx = worldX - light.x;
-			const lightDy = worldY - light.y;
+			const lightDx = worldX - light.position.x;
+			const lightDy = worldY - light.position.y;
 			const lightDist = Math.sqrt(lightDx * lightDx + lightDy * lightDy);
 
 			// Only apply light if within radius

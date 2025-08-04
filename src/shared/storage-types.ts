@@ -2,6 +2,7 @@ import type {
 	BlockData,
 	Clusters,
 	GameSettings,
+	LoadMapContentResult,
 	MapInfo,
 	TileSetParams,
 	TileUpdate,
@@ -27,7 +28,9 @@ export interface StorageAPI {
 		viewport: Viewport,
 		tileUpdates: TileUpdate[],
 	) => Promise<UpdateViewportResult>;
-	loadMapContent: (mapId: string) => Promise<{ blocks: any[]; meta: any }>;
+	loadMapContent: (mapId: string) => Promise<LoadMapContentResult>;
+	loadMapHeader: (mapId: string) => Promise<MapInfo | null>;
+	updateMapHeader: (updatedMap: MapInfo) => Promise<void>;
 
 	// Cluster operations
 	saveClusters: (mapId: string, clusters: Clusters) => Promise<void>;

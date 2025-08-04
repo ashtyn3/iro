@@ -1,7 +1,9 @@
+import Letter from "@renderer/components/letter";
 import { Howl } from "howler";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
 import { setMousePosition } from "~/components/info";
+import letterComponents from "~/lib/generators/letter-components.json";
 import { Clock } from "./clock";
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
@@ -21,12 +23,13 @@ import {
 import { Fire } from "./objects/fire";
 import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
-import { type State, Vec2d } from "./state";
-import type { Storage } from "./storage";
+import { DB, type State, Vec2d } from "./state";
+import { Storage } from "./storage";
 import type { Syncable } from "./sync";
 import { Renderable, type Timed } from "./traits";
 import { createTime, type Time } from "./traits/sims/atmospheric";
 import type { Storeable } from "./traits/storeable";
+import type { InputEvent, MapInfo } from "./types";
 
 export class Engine {
 	width: number;
@@ -48,25 +51,20 @@ export class Engine {
 	infoMenu: MenuHolder;
 	mouse: MouseMoveListener;
 	time!: Time & Storeable & Timed & Syncable;
-	audio: {
+	audio?: {
 		score: Howl;
-		effects: Howl;
+		voicing: {
+			openings: Howl;
+			greetings: Howl;
+			middles: Howl;
+			closings: Howl;
+		};
 	};
 
 	constructor(w: number, h: number, storage: Storage) {
 		this.width = w;
 		this.height = h;
 		this.storage = storage;
-		this.audio = {
-			score: new Howl({
-				src: [],
-				html5: true,
-			}),
-			effects: new Howl({
-				src: [],
-				html5: true,
-			}),
-		}
 
 		// if (import.meta.env.DEV) {
 		this.debug = Debug.getInstance(this, { logLevel: "debug" });
@@ -121,18 +119,63 @@ export class Engine {
 		this.time = createTime(this);
 	}
 
+	async loadAudio() {
+		const sprites = {};
+		Object.keys(letterComponents.audio).forEach((key) => {
+			sprites[key] = {};
+			Object.keys(letterComponents.audio[key]).forEach((sample, i) => {
+				letterComponents.audio[key][sample].forEach((_, idx) => {
+					sprites[key][`${key}_${idx}`] = [
+						letterComponents.audio[key][sample][idx].sample_start * 1000,
+						letterComponents.audio[key][sample][idx].sample_end * 1000,
+					];
+				});
+			});
+		});
+
+		// Debug the dynamic imports
+		const scoreImport = await import("~/lib/assets/audio/score.ogg");
+		const openingsImport = await import("~/lib/assets/audio/openings.mp3");
+		const greetingsImport = await import("~/lib/assets/audio/greetings.mp3");
+		const middlesImport = await import("~/lib/assets/audio/middles.mp3");
+		const closingsImport = await import("~/lib/assets/audio/closings.mp3");
+
+		// Resume audio context if suspended
+		if (Howler.ctx && Howler.ctx.state === "suspended") {
+			Howler.ctx.resume();
+		}
+
+		this.audio = {
+			score: new Howl({
+				src: [scoreImport.default],
+				html5: true,
+				loop: true,
+			}),
+			voicing: {
+				openings: new Howl({
+					src: [openingsImport.default],
+					sprite: sprites["openings"],
+				}),
+				greetings: new Howl({
+					src: [greetingsImport.default],
+					sprite: sprites["greetings"],
+				}),
+				middles: new Howl({
+					src: [middlesImport.default],
+					sprite: sprites["middles"],
+				}),
+				closings: new Howl({
+					src: [closingsImport.default],
+					sprite: sprites["closings"],
+				}),
+			},
+		};
+	}
+
 	async start() {
 		await this.time.sync();
 		await this.player.sync();
-		this.audio.score = new Howl({
-			src: [(await import("~/lib/assets/audio/score.ogg")).default],
-			html5: true,
-			loop: true,
-		});
-		this.audio.effects = new Howl({
-			src: [(await import("~/lib/assets/audio/openings.mp3")).default, (await import("~/lib/assets/audio/greetings.mp3")).default, (await import("~/lib/assets/audio/middles.mp3")).default, (await import("~/lib/assets/audio/closings.mp3")).default],
-		});
-		this.audio.score.play();
+		const db = new DB(Storage.instance);
 		this.player.update({ ...this.player });
 		const actor = {
 			act: () => {
@@ -143,6 +186,115 @@ export class Engine {
 			},
 		};
 		this.scheduler.add(actor, true);
+		await this.loadAudio();
+	}
+
+	handlePlayStart() {
+		// Resume audio context if suspended
+		if (Howler.ctx && Howler.ctx.state === "suspended") {
+			Howler.ctx.resume();
+		}
+
+		this.audio?.score.play();
+		if (!this.mapBuilder.mapHeader.progress?.letter) {
+			this.menuHolder.setMenu(() =>
+				Letter({ mapHeader: this.mapBuilder.mapHeader, engine: this }),
+			);
+			if (this.audio?.voicing) {
+				const playVoicingSequence = (voicing, spriteNames) => {
+					const voicingOrder = ["greetings", "openings", "middles", "closings"];
+					let idx = 0;
+
+					const playNext = () => {
+						if (idx >= voicingOrder.length) {
+							// Audio sequence completed - now set progress to true
+							if (this.mapBuilder.mapHeader.progress) {
+								const db = new DB(Storage.instance);
+								db.updateMapHeader({
+									...this.mapBuilder.mapHeader,
+									progress: { letter: true },
+								} as MapInfo);
+								this.mapBuilder.mapHeader.progress.letter = true;
+							}
+							return;
+						}
+						const key = voicingOrder[idx];
+						const sprite = spriteNames[idx];
+						const howl = voicing[key];
+
+						if (!howl || !sprite) {
+							idx++;
+							playNext();
+							return;
+						}
+
+						try {
+							const soundId = howl.play(sprite);
+
+							howl.once(
+								"end",
+								() => {
+									// Add a small pause between segments
+									setTimeout(() => {
+										idx++;
+										playNext();
+									}, 300);
+								},
+								soundId,
+							);
+
+							howl.once(
+								"loaderror",
+								() => {
+									idx++;
+									playNext();
+								},
+								soundId,
+							);
+
+							howl.once(
+								"playerror",
+								() => {
+									idx++;
+									playNext();
+								},
+								soundId,
+							);
+						} catch (error) {
+							idx++;
+							playNext();
+						}
+					};
+
+					playNext();
+				};
+
+				playVoicingSequence(
+					this.audio.voicing,
+					this.mapBuilder.mapHeader.letter?.sprites ?? [],
+				);
+			}
+		}
+	}
+
+	cleanupAudio() {
+		if (this.audio) {
+			// Stop all audio instances
+			this.audio.score.stop();
+			this.audio.voicing.greetings.stop();
+			this.audio.voicing.openings.stop();
+			this.audio.voicing.middles.stop();
+			this.audio.voicing.closings.stop();
+
+			// Unload the audio to free memory
+			this.audio.score.unload();
+			this.audio.voicing.greetings.unload();
+			this.audio.voicing.openings.unload();
+			this.audio.voicing.middles.unload();
+			this.audio.voicing.closings.unload();
+
+			this.audio = undefined;
+		}
 	}
 
 	async renderDOM() {
@@ -159,8 +311,18 @@ export class Engine {
 		this.engine.start();
 
 		document.body.addEventListener("keydown", async (e) => {
-			const handler = KeyHandles[e.key];
-			if (this.clockSystem.state === "paused" && e.key !== keyMap().pause.key) {
+			const inputEvent: InputEvent = {
+				key: e.key,
+				ctrlKey: e.ctrlKey,
+				shiftKey: e.shiftKey,
+				altKey: e.altKey,
+			};
+
+			const handler = KeyHandles[inputEvent.key];
+			if (
+				this.clockSystem.state === "paused" &&
+				inputEvent.key !== keyMap().pause.key
+			) {
 				return;
 			}
 			if (handler) {
@@ -246,6 +408,7 @@ export class Engine {
 		document.getElementById("gamebox")?.appendChild(canvas);
 		await this.render();
 		this.debug.info(this.mapBuilder.useGPU ? "using GPU" : "using CPU");
+		this.handlePlayStart();
 	}
 	viewport(): Vec2d {
 		const halfX = Math.floor(VIEWPORT.x / 2),

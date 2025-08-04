@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import SuperJSON from "superjson";
 import { defaultKeys } from "../renderer/src/default_keys";
 import type { Cluster, Clusters } from "../renderer/src/lib/map";
+import type { Letter, MapInfo } from "../renderer/src/lib/types";
 
 export enum StoreType {
 	Map = "map",
@@ -104,28 +105,38 @@ export class Storage {
 	}
 
 	public async createTileSet({
+		id,
+		createdAt,
 		width,
 		height,
 		name,
+		letter,
+		progress,
 	}: {
+		id: string;
+		createdAt: string;
 		width: number;
 		height: number;
 		name: string;
+		letter: Letter;
+		progress: { letter: boolean };
 	}) {
 		const mapDir = DIR_MAPPING[StoreType.Map];
-		const mapId = nanoid();
-		const mapPath = path.join(mapDir, mapId);
+		const mapPath = path.join(mapDir, id);
 		fs.mkdirSync(mapPath, { recursive: true });
 		fs.writeFileSync(
 			path.join(mapPath, "map.data"),
 			JSON.stringify({
+				id,
+				createdAt,
 				width,
 				height,
 				name,
-				createdAt: new Date().toISOString(),
+				letter,
+				progress,
 			}),
 		);
-		return mapId;
+		return id;
 	}
 
 	public async insertTileBlocks(
@@ -294,26 +305,22 @@ export class Storage {
 			.filter((dirent) => dirent.isDirectory())
 			.map((dirent) => dirent.name);
 
-		const maps: {
-			id: string;
-			width: number;
-			height: number;
-			createdAt: string;
-		}[] = [];
+		const maps: MapInfo[] = [];
 
 		for (const dirName of directories) {
 			const mapDataPath = path.join(mapDir, dirName, "map.data");
 			if (fs.existsSync(mapDataPath)) {
 				try {
 					const data = fs.readFileSync(mapDataPath, "utf8");
-					const mapData = JSON.parse(data) as {
-						width: number;
-						height: number;
-						createdAt: string;
-					};
+					const mapData = JSON.parse(data) as Partial<MapInfo>;
 					maps.push({
 						id: dirName,
-						...mapData,
+						width: mapData.width ?? 0,
+						height: mapData.height ?? 0,
+						createdAt: mapData.createdAt ?? "",
+						name: mapData.name ?? "",
+						letter: mapData.letter as Letter,
+						progress: mapData.progress ?? { letter: false },
 					});
 				} catch (error) {
 					console.error(`Error reading map data for ${dirName}:`, error);
@@ -324,6 +331,21 @@ export class Storage {
 		return maps.sort(
 			(a, b) =>
 				new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+		);
+	}
+
+	public async loadMapHeader(mapId: string) {
+		const mapPath = path.join(DIR_MAPPING[StoreType.Map], mapId);
+		const mapDataPath = path.join(mapPath, "map.data");
+		const data = fs.readFileSync(mapDataPath, "utf8");
+		return JSON.parse(data) as MapInfo;
+	}
+
+	public async updateMapHeader(updatedMap: MapInfo) {
+		const mapPath = path.join(DIR_MAPPING[StoreType.Map], updatedMap.id);
+		fs.writeFileSync(
+			path.join(mapPath, "map.data"),
+			JSON.stringify(updatedMap),
 		);
 	}
 
@@ -338,7 +360,12 @@ export class Storage {
 		const files = fs.readdirSync(mapPath);
 
 		const blocks: { blockX: number; blockY: number; data: ArrayBuffer }[] = [];
-		let header = { height: 0, width: 0 };
+		let header = {
+			height: 0,
+			width: 0,
+			letter: null,
+			progress: { letter: false },
+		};
 
 		for (const file of files) {
 			if (file.startsWith("BLK.")) {
@@ -397,8 +424,15 @@ export class Storage {
 						height: number;
 						width: number;
 						createdAt?: string;
+						letter?: Letter;
+						progress?: { letter: boolean };
 					};
-					header = { width: parsedData.width, height: parsedData.height };
+					header = {
+						width: parsedData.width,
+						height: parsedData.height,
+						letter: parsedData.letter ?? null,
+						progress: parsedData.progress ?? { letter: false },
+					};
 				} catch (error) {
 					console.error(`Failed to read map.data file: ${error}`);
 					// Keep default header values

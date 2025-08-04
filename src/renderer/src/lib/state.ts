@@ -10,7 +10,9 @@ import type {
 	Clusters,
 	Entity,
 	GameSettings,
+	Letter,
 	MapGenerationResult,
+	MapInfo,
 	Material,
 	Movable,
 	Tile,
@@ -102,12 +104,31 @@ export class DB {
 		DB._instance = this;
 	}
 
-	async saveTileHeader(width: number, height: number, name: string) {
+	async saveTileHeader(
+		id: string,
+		createdAt: string,
+		width: number,
+		height: number,
+		name: string,
+		letter: Letter,
+	) {
 		return Storage.instance.createTileSet({
+			id,
+			createdAt,
 			width,
 			height,
 			name,
-		} as TileSetParams);
+			letter,
+			progress: { letter: false },
+		});
+	}
+
+	async fetchMapHeader(mapId: string) {
+		return Storage.instance.loadMapHeader(mapId);
+	}
+
+	async updateMapHeader(updatedMap: MapInfo) {
+		return Storage.instance.updateMapHeader(updatedMap);
 	}
 
 	async saveTiles(tileSetId: string, tiles: Tile[][]): Promise<string> {
@@ -237,7 +258,6 @@ export class DB {
 	}
 
 	async updateClusters(clusterId: string, clusters: Clusters): Promise<void> {
-		// TODO: Implement updateClusters - update existing clusters
 		await Storage.instance.clusterUpdate(clusterId, clusters);
 	}
 

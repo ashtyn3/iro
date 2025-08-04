@@ -62,8 +62,8 @@ export class GPURenderer {
 
 		for (const emitter of lightEmitters) {
 			const lightSource = emitter.getLightSource();
-			const lightX = lightSource.x;
-			const lightY = lightSource.y;
+			const lightX = lightSource.position.x;
+			const lightY = lightSource.position.y;
 			const lightRadius = lightSource.radius;
 
 			const viewportRight = viewport.x + VIEWPORT.x;
@@ -83,8 +83,8 @@ export class GPURenderer {
 		for (let i = 0; i < lights.length; i++) {
 			const light = lights[i];
 			const offset = i * 6;
-			lightData[offset] = light.x;
-			lightData[offset + 1] = light.y;
+			lightData[offset] = light.position.x;
+			lightData[offset + 1] = light.position.y;
 			lightData[offset + 2] = light.radius;
 			lightData[offset + 4] = light.intensity;
 			lightData[offset + 5] = light.neutralPercentage;
@@ -297,8 +297,8 @@ export class GPURenderer {
 
 	async render(
 		tiles: Tile[][],
-		playerPos: { x: number; y: number },
-		viewport: { x: number; y: number },
+		playerPos: Vec2d,
+		viewport: Vec2d,
 		viewRadius: number,
 	): Promise<
 		{ char: string; fg: string; bg: string | null; x: number; y: number }[]

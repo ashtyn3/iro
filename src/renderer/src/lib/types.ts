@@ -33,12 +33,22 @@ export interface MapInfo {
 	height: number;
 	createdAt: string;
 	name: string;
+	letter: Letter;
+	progress: {
+		letter: boolean;
+	};
 }
 
 export interface TileSetParams {
+	id: string;
+	createdAt: string;
 	width: number;
 	height: number;
 	name: string;
+	letter: Letter;
+	progress: {
+		letter: boolean;
+	};
 }
 
 export interface ClustersSchema {
@@ -75,8 +85,18 @@ export interface GameState {
 	currentCluster: Cluster | null;
 }
 
-export type GameMenuState = "Menu" | "select" | "loading" | "game" | "settings" | "credits";
+export type GameMenuState =
+	| "Menu"
+	| "select"
+	| "loading"
+	| "game"
+	| "settings"
+	| "credits";
 
+export interface Letter {
+	letter: string[];
+	sprites: string[];
+}
 export interface MapGenerationResult {
 	state: boolean;
 	message: string;
@@ -97,11 +117,6 @@ export interface Item {
 export interface InventoryItem {
 	count: number;
 	item: Item;
-}
-
-export interface Handedness {
-	right: Item;
-	left: Item;
 }
 
 export type DominantHand = "right" | "left";
@@ -211,19 +226,24 @@ export interface DebugInfo {
 	environment: string;
 }
 
-export interface GameConfig {
-	version: string;
-	debug: boolean;
-	maxEntities: number;
-	tickRate: number;
-	blockSize: number;
+export interface LoadMapContentResult {
+	blocks: BlockData[];
+	meta: MapInfo;
 }
 
-export interface WorldConfig {
-	width: number;
-	height: number;
-	seed?: number;
-	biomes?: string[];
-}
+// export interface GameConfig {
+// 	version: string;
+// 	debug: boolean;
+// 	maxEntities: number;
+// 	tickRate: number;
+// 	blockSize: number;
+// }
+
+// export interface WorldConfig {
+// 	width: number;
+// 	height: number;
+// 	seed?: number;
+// 	biomes?: string[];
+// }
 
 export type { Entity, Existable, Movable, Material, Cluster, Clusters, Tile };

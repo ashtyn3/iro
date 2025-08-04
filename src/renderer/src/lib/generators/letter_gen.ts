@@ -9,28 +9,27 @@ export function generateLetter(seed: string) {
     const middles = letterComponents.game.middles;
     const closings = letterComponents.game.closings;
 
-    const greetingSamples = letterComponents.audio.greetings.samples;
-    const openingSamples = letterComponents.audio.openings.samples;
-    const middleSamples = letterComponents.audio.middles.samples;
-    const closingSamples = letterComponents.audio.closings.samples;
 
-    const greeting = greetings[Math.floor(rng() * greetings.length)];
-    const opening = openings[Math.floor(rng() * openings.length)];
-    const middle = middles[Math.floor(rng() * middles.length)];
-    const closing = closings[Math.floor(rng() * closings.length)];
+    const greetingIndex = Math.floor(rng() * greetings.length);
+    const openingIndex = Math.floor(rng() * openings.length);
+    const middleIndex = Math.floor(rng() * middles.length);
+    const closingIndex = Math.floor(rng() * closings.length);
 
-    const greetingSample = greetingSamples[Math.floor(rng() * greetingSamples.length)];
-    const openingSample = openingSamples[Math.floor(rng() * openingSamples.length)];
-    const middleSample = middleSamples[Math.floor(rng() * middleSamples.length)];
-    const closingSample = closingSamples[Math.floor(rng() * closingSamples.length)];
+    const greeting = greetings[greetingIndex];
+    const opening = openings[openingIndex];
+    const middle = middles[middleIndex];
+    const closing = closings[closingIndex];
 
-    const letter = `${greeting}\n\n${opening}\n\n${middle}\n\n${closing}`;
+    const greetingSample = `greetings_${greetingIndex}`;
+    const openingSample = `openings_${openingIndex}`;
+    const middleSample = `middles_${middleIndex}`;
+    const closingSample = `closings_${closingIndex}`;
+
+    const letter = [greeting, opening, middle, closing];
+    const sprites = [greetingSample, openingSample, middleSample, closingSample];
 
     return {
         letter,
-        greetingSample,
-        openingSample,
-        middleSample,
-        closingSample,
+        sprites,
     }
 }

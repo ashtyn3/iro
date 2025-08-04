@@ -70,13 +70,13 @@ export const Pathed: Component<
 			{ topology: 8 },
 		);
 
-		let nextStep: { x: number; y: number } | undefined;
+		let nextStep: Vec2d | undefined;
 		pathfinder.compute(e.position.x, e.position.y, (x, y) => {
 			if (
 				nextStep === undefined &&
 				(x !== e.position.x || y !== e.position.y)
 			) {
-				nextStep = { x, y };
+				nextStep = Vec2d({ x, y });
 			}
 		});
 

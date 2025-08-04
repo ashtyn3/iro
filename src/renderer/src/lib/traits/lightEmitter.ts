@@ -1,10 +1,10 @@
 import type { Component } from "../comps";
 import { VIEWPORT } from "../map";
+import type { Vec2d } from "../types";
 import type { Entity, Existable } from "./types";
 
 export interface LightSource {
-	x: number;
-	y: number;
+	position: Vec2d;
 	radius: number;
 	color: string;
 	intensity: number;
@@ -43,8 +43,7 @@ export const LightEmitter: Component<
 			);
 		}
 		return {
-			x: position.x,
-			y: position.y,
+			position,
 			radius: e.lightRadius,
 			color: e.lightColor,
 			intensity: e.lightIntensity,
@@ -55,8 +54,8 @@ export const LightEmitter: Component<
 	e.inViewportWR = () => {
 		const lightSource = e.getLightSource();
 		const viewport = e.engine.viewport();
-		const lightX = lightSource.x;
-		const lightY = lightSource.y;
+		const lightX = lightSource.position.x;
+		const lightY = lightSource.position.y;
 		const lightRadius = lightSource.radius;
 
 		const viewportRight = viewport.x + VIEWPORT.x;

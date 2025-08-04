@@ -45,6 +45,11 @@ export default function Menu() {
 		setCurrentState("loading");
 
 		try {
+			// Clean up existing engine audio before creating new one
+			if (engine()) {
+				engine()!.cleanupAudio();
+			}
+
 			const storage = Storage.instance;
 			const newEngine = new Engine(350, 350, storage as any);
 			setEngine(newEngine);
@@ -67,6 +72,11 @@ export default function Menu() {
 	const handleLoadGame = async (tileSetId: string) => {
 		setCurrentState("loading");
 		try {
+			// Clean up existing engine audio before creating new one
+			if (engine()) {
+				engine()!.cleanupAudio();
+			}
+
 			const storage = Storage.instance;
 			const newEngine = new Engine(350, 350, storage as any);
 			setEngine(newEngine);
