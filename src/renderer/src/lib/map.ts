@@ -5,6 +5,7 @@ import { createNoise2D } from "simplex-noise";
 import { createSignal, from } from "solid-js";
 import { MaterialRegistry } from "~/lib/material";
 import { EntityRegistry } from "./entity";
+import { generateLetter } from "./generators/letter_gen";
 import { generateMapName } from "./generators/map_name";
 import {
 	generateMaterialInventory,
@@ -197,7 +198,7 @@ export class GMap {
 
 		try {
 			const db = new DB(this.storage);
-			const BATCH_SIZE = 200; 
+			const BATCH_SIZE = 200;
 			const queueToProcess = [...this.writeQueue]; // Create a copy to process
 			const clusterOpsToProcess = [...this.clusterQueue]; // Copy cluster operations
 			this.writeQueue = []; // Clear the queue immediately to accept new updates
@@ -277,7 +278,7 @@ export class GMap {
 			this.queueFlushTimer = null;
 		}, 2000);
 	}
-	async genMap(): Promise<{ state: boolean; message: string }> {
+	async genMap(): Promise<{ state: boolean; message: string, letter?: {letter: string, greetingSample: {sample_start: number, sample_end: number}, openingSample: {sample_start: number, sample_end: number}, middleSample: {sample_start: number, sample_end: number}, closingSample: {sample_start: number, sample_end: number}} }> {
 		const db = new DB(this.storage);
 		const canMakeMap = await db.canMakeMap();
 		if (!canMakeMap.state) {
@@ -387,10 +388,12 @@ export class GMap {
 		}
 		this.engine.debug.info("finish map assignments");
 		this.orePass();
+		const letter = generateLetter(nanoid());
+		this.engine.debug.info("finish letter");
 		this.engine.debug.info("finish ore pass");
 		await this.buildClusters();
 		this.engine.debug.info("finish clusters");
-		return { state: true, message: "Map created" };
+		return { state: true, message: "Map created", letter  };
 	}
 	private samplePoisson(lambda: number, rng: seedrandom.PRNG): number {
 		const L = Math.exp(-lambda);

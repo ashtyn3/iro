@@ -5,6 +5,7 @@ import { DB } from "~/lib/state";
 import { Storage } from "~/lib/storage";
 import type { GameMenuState, MapGenerationResult, MapInfo } from "~/lib/types";
 import Button from "./Button";
+import Credits from "./credits";
 import Game from "./game";
 import MainMenu from "./main-menu";
 import Settings from "./Settings";
@@ -140,10 +141,14 @@ export default function Menu() {
 						handleNewGame={handleNewGame}
 						setCurrentState={setCurrentState}
 					/>
-					<div class="text-white text-xs absolute bottom-0 right-0 flex gap-4 p-4">
-						<a href="/docs" class="text-white hover:text-gray-300 no-underline">
-							GUIDE
-						</a>
+					<div class="text-white text-xs absolute bottom-0 right-0 flex gap-4 p-4 align-middle items-center">
+						<Button
+							onClick={() => setCurrentState("credits")}
+							variant="text"
+							size="sm"
+						>
+							CREDITS
+						</Button>
 						<span>VERSION: {GIT_SHA}</span>
 					</div>
 				</>
@@ -197,6 +202,19 @@ export default function Menu() {
 							onChange={handleFileImport}
 						/>
 					</div>
+				</div>
+			)}
+
+			{currentState() === "credits" && (
+				<div>
+					<Button
+						size="sm"
+						onClick={() => setCurrentState("Menu")}
+						class="mb-4"
+					>
+						&lt; BACK
+					</Button>
+					<Credits />
 				</div>
 			)}
 

@@ -72,28 +72,30 @@
                 }
             ]
         },
-        "closings": [
-            {
-                "sample_start": 0,
-                "sample_end": 7.549
-            },
-            {
-                "sample_start": 7.549,
-                "sample_end": 15.804
-            },
-            {
-                "sample_start": 15.804,
-                "sample_end": 23.693
-            },
-            {
-                "sample_start": 23.693,
-                "sample_end": 31.660
-            },
-            {
-                "sample_start": 31.660,
-                "sample_end": 37.695
-            }
-        ],
+        "closings": {
+            "samples": [
+                {
+                    "sample_start": 0,
+                    "sample_end": 7.549
+                },
+                {
+                    "sample_start": 7.549,
+                    "sample_end": 15.804
+                },
+                {
+                    "sample_start": 15.804,
+                    "sample_end": 23.693
+                },
+                {
+                    "sample_start": 23.693,
+                    "sample_end": 31.660
+                },
+                {
+                    "sample_start": 31.660,
+                    "sample_end": 37.695
+                }
+            ]
+        },
         "exit": {}
     },
     "game": {

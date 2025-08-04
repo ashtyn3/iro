@@ -75,7 +75,7 @@ export interface GameState {
 	currentCluster: Cluster | null;
 }
 
-export type GameMenuState = "Menu" | "select" | "loading" | "game" | "settings";
+export type GameMenuState = "Menu" | "select" | "loading" | "game" | "settings" | "credits";
 
 export interface MapGenerationResult {
 	state: boolean;

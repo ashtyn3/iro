@@ -1,3 +1,4 @@
+import { Howl } from "howler";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
 import { setMousePosition } from "~/components/info";
@@ -47,11 +48,25 @@ export class Engine {
 	infoMenu: MenuHolder;
 	mouse: MouseMoveListener;
 	time!: Time & Storeable & Timed & Syncable;
+	audio: {
+		score: Howl;
+		effects: Howl;
+	};
 
 	constructor(w: number, h: number, storage: Storage) {
 		this.width = w;
 		this.height = h;
 		this.storage = storage;
+		this.audio = {
+			score: new Howl({
+				src: [],
+				html5: true,
+			}),
+			effects: new Howl({
+				src: [],
+				html5: true,
+			}),
+		}
 
 		// if (import.meta.env.DEV) {
 		this.debug = Debug.getInstance(this, { logLevel: "debug" });
@@ -70,7 +85,8 @@ export class Engine {
 			width: TILES_X,
 			height: TILES_Y,
 			fontSize: FONT_PX,
-			fontFamily: "MorePerfectDOSVGA, Courier New, Courier, Consolas, Monaco, Lucida Console, monospace",
+			fontFamily:
+				"MorePerfectDOSVGA, Courier New, Courier, Consolas, Monaco, Lucida Console, monospace",
 			forceSquareRatio: true,
 		});
 
@@ -108,6 +124,15 @@ export class Engine {
 	async start() {
 		await this.time.sync();
 		await this.player.sync();
+		this.audio.score = new Howl({
+			src: [(await import("~/lib/assets/audio/score.ogg")).default],
+			html5: true,
+			loop: true,
+		});
+		this.audio.effects = new Howl({
+			src: [(await import("~/lib/assets/audio/openings.mp3")).default, (await import("~/lib/assets/audio/greetings.mp3")).default, (await import("~/lib/assets/audio/middles.mp3")).default, (await import("~/lib/assets/audio/closings.mp3")).default],
+		});
+		this.audio.score.play();
 		this.player.update({ ...this.player });
 		const actor = {
 			act: () => {

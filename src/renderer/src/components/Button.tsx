@@ -1,7 +1,7 @@
 import type { Component, JSX } from "solid-js";
 
 interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
-	variant?: "primary" | "secondary" | "custom";
+	variant?: "primary" | "secondary" | "text" | "custom";
 	size?: "sm" | "md" | "lg";
 	children: JSX.Element;
 	class?: string;
@@ -17,7 +17,9 @@ const Button: Component<ButtonProps> = (props) => {
 	} = props;
 
 	const baseClasses =
-		"border-2 border-white font-bold transition-all duration-200 ease-in-out hover:cursor-pointer hover:-translate-y-0.5 active:translate-y-0";
+		variant === "text"
+			? "font-bold transition-all duration-200 ease-in-out hover:cursor-pointer hover:opacity-80 active:opacity-60"
+			: "border-2 border-white font-bold transition-all duration-200 ease-in-out hover:cursor-pointer hover:-translate-y-0.5 active:translate-y-0";
 
 	const sizeClasses = {
 		sm: "text-xs px-4 py-2",
@@ -29,6 +31,7 @@ const Button: Component<ButtonProps> = (props) => {
 		primary: "bg-transparent text-white hover:bg-white hover:text-black",
 		secondary:
 			"bg-transparent text-white hover:bg-white hover:text-black opacity-80",
+		text: "bg-transparent text-white hover:text-gray-300",
 		custom: "",
 	};
 

@@ -31,8 +31,14 @@ export class Clock {
 	toggle() {
 		this.state = this.state === "running" ? "paused" : "running";
 		if (this.state === "paused") {
+			if (this.engine.audio.score.playing()) {
+				this.engine.audio.score.stop();
+			}
 			this.engine.menuHolder.setMenu(() => Pause({ engine: this.engine }));
 		} else {
+			if (!this.engine.audio.score.playing()) {
+				this.engine.audio.score.play();
+			}
 			this.engine.menuHolder.menuOff();
 		}
 	}
