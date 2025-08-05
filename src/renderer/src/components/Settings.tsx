@@ -37,6 +37,70 @@ export function KeyMapSwitcher({ settings }: { settings: any }) {
 	);
 }
 
+export function AudioPanel({ settings }: { settings: any }) {
+	const db = new DB(null as any);
+	const updateSettings = async (newSettings: any) => {
+		await db.updateSettings(newSettings);
+	};
+	return (
+		<div class="flex flex-col gap-4 text-white">
+			<div class="flex flex-col gap-2">
+				<label for="music-volume" class="text-base font-bold">
+					Music Volume
+				</label>
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					value={settings()?.audio.music}
+					class="w-full h-2 bg-transparent border-2 border-white appearance-none cursor-pointer focus:outline-none"
+					style={{
+						background: "transparent",
+						"border-radius": "0",
+						"accent-color": "white",
+						color: "white",
+					}}
+					onInput={(e) => {
+						updateSettings({
+							...settings(),
+							audio: {
+								...settings()?.audio,
+								music: parseFloat(e.target.value),
+							},
+						});
+					}}
+				/>
+			</div>
+			<div class="flex flex-col gap-2">
+				<label for="sfx-volume" class="text-base font-bold">
+					SFX Volume
+				</label>
+				<input
+					type="range"
+					min="0"
+					max="1"
+					step="0.05"
+					value={settings()?.audio.sfx}
+					class="w-full h-2 bg-transparent border-2 border-white appearance-none cursor-pointer focus:outline-none"
+					style={{
+						background: "transparent",
+						"border-radius": "0",
+						"accent-color": "white",
+						color: "white",
+					}}
+					onInput={(e) => {
+						updateSettings({
+							...settings(),
+							audio: { ...settings()?.audio, sfx: parseFloat(e.target.value) },
+						});
+					}}
+				/>
+			</div>
+		</div>
+	);
+}
+
 export default function Settings() {
 	const db = new DB(null as any);
 	const [settings, setSettings] = createResource(async () => {
@@ -71,7 +135,7 @@ export default function Settings() {
 	};
 
 	return (
-		<div class="max-w-md mx-auto p-6 text-white rounded-lg">
+		<div class="max-w-md mx-auto p-6 text-white rounded-lg h-[80vh] overflow-y-auto">
 			<h1 class="text-2xl font-bold mb-6">Settings</h1>
 
 			<div class="space-y-4">
@@ -99,6 +163,18 @@ export default function Settings() {
 						class="px-3 py-2 border border-gray-600 rounded-md text-gray-300"
 					>
 						<KeyMapSwitcher settings={settings} />
+					</div>
+				</div>
+
+				<div>
+					<label for="keymap-display" class="block text-sm font-medium mb-2">
+						Audio
+					</label>
+					<div
+						id="keymap-display"
+						class="px-3 py-2 border border-gray-600 rounded-md text-gray-300"
+					>
+						<AudioPanel settings={settings} />
 					</div>
 				</div>
 			</div>

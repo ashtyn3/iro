@@ -123,7 +123,11 @@ export type DominantHand = "right" | "left";
 
 export interface GameSettings {
 	keyMap: any;
-	handed: string;
+	handed: DominantHand;
+	audio: {
+		music: number;
+		sfx: number;
+	};
 }
 
 export interface ApiResponse<T = any> {

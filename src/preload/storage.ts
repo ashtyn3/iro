@@ -6,7 +6,7 @@ import { nanoid } from "nanoid";
 import SuperJSON from "superjson";
 import { defaultKeys } from "../renderer/src/default_keys";
 import type { Cluster, Clusters } from "../renderer/src/lib/map";
-import type { Letter, MapInfo } from "../renderer/src/lib/types";
+import type { GameSettings, Letter, MapInfo } from "../renderer/src/lib/types";
 
 export enum StoreType {
 	Map = "map",
@@ -610,9 +610,7 @@ export class Storage {
 		}
 	}
 
-	public async getSettings(): Promise<
-		{ keyMap: any; handed: string } | undefined
-	> {
+	public async getSettings(): Promise<GameSettings | undefined> {
 		const settingsPath = path.join(
 			DIR_MAPPING[StoreType.Settings],
 			"settings.data",
@@ -621,7 +619,7 @@ export class Storage {
 			return undefined;
 		}
 		const data = fs.readFileSync(settingsPath, "utf8");
-		return JSON.parse(data) as { keyMap: any; handed: string };
+		return JSON.parse(data) as GameSettings;
 	}
 
 	public async hasSettings(): Promise<boolean> {
@@ -639,11 +637,15 @@ export class Storage {
 		);
 		fs.writeFileSync(
 			settingsPath,
-			JSON.stringify({ keyMap: defaultKeys, handed: "right" }),
+			JSON.stringify({
+				keyMap: defaultKeys,
+				handed: "right",
+				audio: { music: 0.5, sfx: 0.5 },
+			}),
 		);
 	}
 
-	public async updateSettings(settings: any): Promise<void> {
+	public async updateSettings(settings: GameSettings): Promise<void> {
 		const settingsPath = path.join(
 			DIR_MAPPING[StoreType.Settings],
 			"settings.data",

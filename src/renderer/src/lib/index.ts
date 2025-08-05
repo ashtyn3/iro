@@ -120,6 +120,8 @@ export class Engine {
 	}
 
 	async loadAudio() {
+		const db = new DB(Storage.instance);
+		const settings = await db.getSettings();
 		const sprites = {};
 		Object.keys(letterComponents.audio).forEach((key) => {
 			sprites[key] = {};
@@ -150,23 +152,29 @@ export class Engine {
 				src: [scoreImport.default],
 				html5: true,
 				loop: true,
+				autoplay: true,
+				volume: settings?.audio.music,
 			}),
 			voicing: {
 				openings: new Howl({
 					src: [openingsImport.default],
 					sprite: sprites["openings"],
+					volume: settings?.audio.sfx,
 				}),
 				greetings: new Howl({
 					src: [greetingsImport.default],
 					sprite: sprites["greetings"],
+					volume: settings?.audio.sfx,
 				}),
 				middles: new Howl({
 					src: [middlesImport.default],
 					sprite: sprites["middles"],
+					volume: settings?.audio.sfx,
 				}),
 				closings: new Howl({
 					src: [closingsImport.default],
 					sprite: sprites["closings"],
+					volume: settings?.audio.sfx,
 				}),
 			},
 		};
@@ -195,7 +203,6 @@ export class Engine {
 			Howler.ctx.resume();
 		}
 
-		this.audio?.score.play();
 		if (!this.mapBuilder.mapHeader.progress?.letter) {
 			this.menuHolder.setMenu(() =>
 				Letter({ mapHeader: this.mapBuilder.mapHeader, engine: this }),
