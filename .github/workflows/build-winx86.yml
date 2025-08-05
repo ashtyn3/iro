@@ -31,12 +31,24 @@ jobs:
           npm_config_arch: ia32
           CI: true
 
+      - name: List build output (debug)
+        run: |
+          echo "Contents of current directory:"
+          dir
+          echo "Looking for dist directory:"
+          if (Test-Path "dist") { dir dist -Recurse } else { echo "dist directory not found" }
+          echo "Looking for build directory:"
+          if (Test-Path "build") { dir build -Recurse } else { echo "build directory not found" }
+          echo "Looking for out directory:"
+          if (Test-Path "out") { dir out -Recurse } else { echo "out directory not found" }
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: electron-app-windows-x86
           path: |
-            dist/*.exe
-            dist/*.msi
-            dist/*.zip
+            dist/
+            build/
+            out/
           retention-days: 30
+        if: always()
