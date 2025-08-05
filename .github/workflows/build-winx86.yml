@@ -24,7 +24,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build Electron app for Windows x86
-        run: bun run build
+        run: bun run build:win
         env:
           npm_config_target_arch: ia32
           npm_config_target_platform: win32
