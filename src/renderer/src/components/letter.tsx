@@ -14,8 +14,7 @@ export default function Letter({
 		<div class="p-4 w-full h-full absolute top-0 left-0 bg-black flex flex-col items-center justify-center">
 			<div class="relative w-[70%] h-[70%] bg-black border-2 border-white flex flex-col">
 				<Button
-					type="button"
-					class="absolute top-2 right-2 text-white text-2xl bg-transparent border-none cursor-pointer z-10 hover:text-gray-300"
+					class="absolute top-2 right-2"
 					aria-label="Close letter"
 					onClick={() => {
 						engine.menuHolder.menuOff();
