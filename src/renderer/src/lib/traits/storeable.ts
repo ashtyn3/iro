@@ -1,9 +1,8 @@
 import SuperJSON from "superjson";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
 import type { Component } from "../comps";
 import { deserializeEntity } from "../entity";
 import { DB } from "../state";
+import { Storage } from "../storage";
 import type { Syncable } from "../sync";
 import type { Entity, Existable } from "./types";
 
@@ -20,11 +19,8 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 	e.id = init;
 
 	e.sync = async () => {
-		const db = new DB(e.engine.convex);
-		const state = await db.getEntityState(
-			e.engine.mapBuilder.mapId as Id<"tileSets">,
-			e.id,
-		);
+		const db = new DB(Storage.instance);
+		const state = await db.getEntityState(e.engine.mapBuilder.mapId, e.id);
 		if (state) {
 			return deserializeEntity(e.engine, SuperJSON.parse(state), e);
 		}
@@ -42,9 +38,9 @@ export const Storeable: Component<Storeable, string> = (base, init) => {
 	};
 
 	e.store = async () => {
-		const db = new DB(e.engine.convex);
+		const db = new DB(Storage.instance);
 		await db.saveEntityState(
-			e.engine.mapBuilder.mapId as Id<"tileSets">,
+			e.engine.mapBuilder.mapId,
 			e.id,
 			SuperJSON.stringify(e.serialize()),
 		);

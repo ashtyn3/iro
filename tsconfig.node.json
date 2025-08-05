@@ -3,6 +3,15 @@
   "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/renderer/**/*"],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"]
+    "types": ["electron-vite/node"],
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ],
+      "~/*": [
+        "src/renderer/src/*"
+      ]
+    }
   }
 }
