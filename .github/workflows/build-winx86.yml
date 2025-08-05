@@ -1,11 +1,8 @@
 name: Build Electron App (Windows x86)
 
 on:
-  push:
-    branches: [trunk]
-  pull_request:
-    branches: [trunk]
-  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
   build-windows-x86:
@@ -24,31 +21,22 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build Electron app for Windows x86
-        run: bun run build:win
+        run: bun run build
         env:
           npm_config_target_arch: ia32
           npm_config_target_platform: win32
           npm_config_arch: ia32
           CI: true
 
-      - name: List build output (debug)
-        run: |
-          echo "Contents of current directory:"
-          dir
-          echo "Looking for dist directory:"
-          if (Test-Path "dist") { dir dist -Recurse } else { echo "dist directory not found" }
-          echo "Looking for build directory:"
-          if (Test-Path "build") { dir build -Recurse } else { echo "build directory not found" }
-          echo "Looking for out directory:"
-          if (Test-Path "out") { dir out -Recurse } else { echo "out directory not found" }
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
-          name: electron-app-windows-x86
-          path: |
-            dist/
-            build/
-            out/
-          retention-days: 30
-        if: always()
+          files: |
+            dist/**/*.exe
+            dist/**/*.msi
+            dist/**/*.zip
+            build/**/*.exe
+            build/**/*.msi
+            build/**/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
