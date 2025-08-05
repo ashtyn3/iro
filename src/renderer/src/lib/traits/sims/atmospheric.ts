@@ -141,7 +141,7 @@ export const createHeatMap = async (e: Engine, eMapInit: number[]) => {
 	)((pos, elevation, humidity) => {
 		"kernel";
 		const t0 = baseTempFn(pos.y, inputs.$.map_dims.y);
-		const t1 = t0 - 0.0065 * std.max(0, elevation);
+		const t1 = t0 - 0.02 * std.max(0, elevation);
 		const humid = (humidity - 0.05) * 4.0;
 		return t1 + humid;
 	});
