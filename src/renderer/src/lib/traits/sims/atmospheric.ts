@@ -2,6 +2,7 @@ import { VIEWPORT } from "@renderer/lib/map";
 import * as Immutable from "immutable";
 import tgpu from "typegpu";
 import * as d from "typegpu/data";
+import * as std from "typegpu/std";
 import type { Engine } from "~/lib";
 import type { Component } from "../../comps";
 import { createEntity, EntityBuilder } from "../../entity";
@@ -97,21 +98,70 @@ export function createTime(e: Engine) {
 	return final;
 }
 
-export interface Atmosphere extends Existable {}
+export interface Atmosphere extends Existable {
+	compute: () => void;
+}
 
-export const Atmosphere: Component<Atmosphere, {}> = (base, init) => {
-	const e = base as Existable & Atmosphere;
-	const device = e.engine.mapBuilder.gpu.getDevice();
+export const createHeatMap = async (e: Engine, eMapInit: number[]) => {
+	await e.mapBuilder.gpu.init();
+	const device = e.mapBuilder.gpu.getDevice();
+
+	if (!device) {
+		throw new Error("No device found");
+	}
 	const gpu = tgpu.initFromDevice({ device });
-	const fn = tgpu.fn(
-		[],
+	console.log("creating heat map");
+	const elevationMap = gpu.createMutable(
+		d.arrayOf(d.f32, VIEWPORT.x * VIEWPORT.y),
+		eMapInit,
+	);
+	const map_dims = d.vec2i(VIEWPORT.x, VIEWPORT.y);
+	const inputs = gpu.createUniform(
+		d.struct({
+			map_dims: d.vec2i,
+		}),
+
+		{
+			map_dims,
+		},
+	);
+
+	const baseTempFn = tgpu.fn(
+		[d.i32, d.i32],
 		d.f32,
-	)(() => {
-		return 0;
+	)((y, map_height) => {
+		"kernel";
+		const x = std.abs(y - map_height / 2);
+		return 30.0 - d.f32(x) * 0.5;
 	});
-	const buffer = gpu.createBuffer(d.arrayOf(d.f32, VIEWPORT.x * VIEWPORT.y));
-	const computeFn = tgpu["~unstable"].computeFn({
-		workgroupSize: [1, 1, 1],
+
+	const tempAtPos = tgpu.fn(
+		[d.vec2i, d.f32, d.f32],
+		d.f32,
+	)((pos, elevation, humidity) => {
+		"kernel";
+		const t0 = baseTempFn(pos.y, inputs.$.map_dims.y);
+		const t1 = t0 - 0.0065 * std.max(0, elevation);
+		const humid = (humidity - 0.05) * 4.0;
+		return t1 + humid;
 	});
-	return e;
+	const heatMap = gpu.createMutable(d.arrayOf(d.f32, VIEWPORT.x * VIEWPORT.y));
+
+	const WORKGROUP_SIZE = [8, 8];
+	const workgroupCountX = Math.ceil(map_dims.x / WORKGROUP_SIZE[0]);
+	const workgroupCountY = Math.ceil(map_dims.y / WORKGROUP_SIZE[1]);
+	const rootFn = tgpu["~unstable"].computeFn({
+		in: { id: d.builtin.globalInvocationId },
+		workgroupSize: WORKGROUP_SIZE,
+	})((num) => {
+		"kernel";
+		const pos = d.vec2i(num.id.x, num.id.y);
+		const elevation = elevationMap.$[pos.x + pos.y * inputs.value.map_dims.x];
+		const humidity = 0.5;
+		const temp = tempAtPos(pos, elevation, humidity);
+		heatMap.$[pos.x + pos.y * inputs.value.map_dims.x] = temp;
+	});
+	const pipeline = gpu["~unstable"].withCompute(rootFn).createPipeline();
+	pipeline.dispatchWorkgroups(workgroupCountX, workgroupCountY);
+	return heatMap.read();
 };

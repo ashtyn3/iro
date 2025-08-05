@@ -40,6 +40,7 @@
     "superjson": "^2.0.0",
     "tailwindcss": "^4.1.11",
     "typegpu": "^0.6.0",
+    "unplugin-typegpu": "^0.2.2",
     "wgpu-matrix": "^3.4.0"
   },
   "devDependencies": {
