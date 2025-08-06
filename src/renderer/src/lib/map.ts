@@ -17,6 +17,7 @@ import type { Engine } from "./index";
 import { DB } from "./state";
 import type { Storage } from "./storage";
 import { LightEmitter, type LightSource, Movable } from "./traits";
+import { createHeatMap } from "./traits/sims/atmospheric";
 import {
 	type MapGenerationResult,
 	type MapInfo,
@@ -346,10 +347,17 @@ export class GMap {
 		this.engine.debug.info("finish smooth map");
 
 		this.tiles = new Array(this.width);
+
+		const heatMap = await createHeatMap(this.engine, this.map.flat());
+		console.log("heatMap", heatMap);
 		for (let x = 0; x < this.width; x++) {
 			this.tiles[x] = [];
 			for (let y = 0; y < this.height; y++) {
 				const elev = this.map[x][y];
+				const rawTemp = heatMap[x + y * this.width];
+				const temperature =
+					typeof rawTemp === "number" && isFinite(rawTemp) ? rawTemp : 20; // Default temperature if invalid
+
 				const tile: Tile = {
 					fg: undefined,
 					bg: undefined,
@@ -358,7 +366,7 @@ export class GMap {
 					mask: null,
 					kind: TileKinds.grass,
 					elevation: elev,
-					temperature: 20, // Default temperature
+					temperature: temperature,
 				};
 
 				if (elev <= 0) {

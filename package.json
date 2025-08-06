@@ -29,6 +29,7 @@
     "@oneidentity/zstd-js": "^1.0.0",
     "@tailwindcss/cli": "^4.1.11",
     "@tailwindcss/vite": "^4.1.11",
+    "@typegpu/noise": "^0.1.0",
     "@types/howler": "^2.2.12",
     "electron-updater": "^6.3.9",
     "howler": "^2.2.4",
@@ -40,6 +41,7 @@
     "superjson": "^2.0.0",
     "tailwindcss": "^4.1.11",
     "typegpu": "^0.6.0",
+    "unplugin-typegpu": "^0.2.2",
     "wgpu-matrix": "^3.4.0"
   },
   "devDependencies": {
