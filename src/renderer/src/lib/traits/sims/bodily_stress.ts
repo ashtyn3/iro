@@ -1,22 +1,8 @@
-import * as Immutable from "immutable";
 import type { Component } from "~/lib/comps";
-import { createEntity, EntityBuilder } from "~/lib/entity";
-import type { Entity, Existable } from "..";
+import type { Existable } from "..";
 
 // Simplified physiological constants
 const CORE_TEMP_NORMAL = 37;
-const MAX_FORCE = 450; // Total max force from all fiber types
-
-type FiberForce = {
-	I: number;
-	IIa: number;
-	IIx: number;
-};
-type FiberActivation = {
-	I: number;
-	IIa: number;
-	IIx: number;
-};
 
 // Flattened OrganicBody interface - no nested components
 export interface OrganicBody extends Existable {

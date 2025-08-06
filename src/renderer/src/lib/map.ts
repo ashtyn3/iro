@@ -50,6 +50,7 @@ export type Cluster = {
 	kind: TileKinds;
 	points: Vec2d[];
 	center: Vec2d;
+	oreName?: string;
 };
 
 export type Clusters = {
@@ -1021,10 +1022,19 @@ export class GMap {
 				};
 
 				if (clusters[kind]) {
+					if (kind === TileKinds.ore) {
+						clusters[TileKinds.ore].push({
+							kind: TileKinds.ore,
+							points: points.map((p) => Vec2d({ x: p.x, y: p.y })),
+							center: Vec2d({ x: center.x, y: center.y }),
+							oreName: this.tiles[center.x][center.y].oreName,
+						});
+						continue;
+					}
 					(clusters[kind] as Cluster[]).push({
 						kind,
-						points: points.map((p) => ({ x: p.x, y: p.y })),
-						center, // center is already a plain object { x, y }
+						points: points.map((p) => Vec2d({ x: p.x, y: p.y })),
+						center: Vec2d({ x: center.x, y: center.y }),
 					});
 				} else {
 					console.warn(`Unknown cluster kind: ${kind}`);
@@ -1121,7 +1131,7 @@ export class GMap {
 					const cluster: Cluster = {
 						kind: effectiveKind,
 						points: clusterPoints,
-						center,
+						center: Vec2d({ x: center.x, y: center.y }),
 					};
 
 					(clusters[effectiveKind] as Cluster[]).push(cluster);

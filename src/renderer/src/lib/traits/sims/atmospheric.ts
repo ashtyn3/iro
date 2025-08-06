@@ -10,8 +10,7 @@ import { Syncable } from "../../sync";
 import { Event, Named, Storeable, Timed } from "..";
 import type { Existable } from "../types";
 
-// const TICKS_PER_SECOND = import.meta.env.DEV ? 1 : 3;
-const TICKS_PER_SECOND = 1;
+const TICKS_PER_SECOND = 2;
 const TICKS_PER_MINUTE = TICKS_PER_SECOND * (TICKS_PER_SECOND * 2);
 const TICKS_PER_HOUR = TICKS_PER_MINUTE * TICKS_PER_SECOND;
 
