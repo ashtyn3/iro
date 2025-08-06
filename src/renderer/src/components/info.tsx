@@ -46,8 +46,9 @@ const TabHeader = ({
 
 // Tab Content Components
 const InfoTab = ({ engine, tile }: TabContentProps) => {
-	const infoHead = () => {
-		if (tile().oreName) {
+	const currentTile = () => tile();
+	const InfoHead = () => {
+		if (currentTile().oreName) {
 			return (
 				<>
 					<strong>Ore:</strong> {tile().oreName}
@@ -56,30 +57,31 @@ const InfoTab = ({ engine, tile }: TabContentProps) => {
 		}
 		return (
 			<>
-				<strong>Type:</strong> {TileKinds[tile().kind]}
+				<strong>Type:</strong> {TileKinds[currentTile().kind]}
 			</>
 		);
 	};
-
-	const currentTile = () => tile();
-	const mask = () => currentTile().mask;
-	const showMask = () => mask() && mask()?.kind !== TileKinds.cursor;
+	createEffect(() => {
+		console.log(currentTile());
+	});
+	const showMask = () =>
+		currentTile().mask && currentTile().mask?.kind !== TileKinds.cursor;
 
 	return (
 		<div class="p-4">
 			<h3 class="text-lg font-bold mb-2">Tile Information</h3>
 			<div class="space-y-2">
-				{infoHead()}
+				{currentTile().kind && <InfoHead />}
 				{showMask() && (
 					<p>
-						<strong>Mask:</strong> {TileKinds[mask()!.kind]}
+						<strong>Above:</strong> {TileKinds[currentTile().mask!.kind]}
 					</p>
 				)}
-				{currentTile().promotable && (
+				{/* {currentTile().promotable && (
 					<p>
 						<strong>Promotable:</strong> {currentTile().promotable?.type}
 					</p>
-				)}
+				)} */}
 			</div>
 		</div>
 	);
@@ -133,7 +135,7 @@ const StatsTab = ({ engine, tile }: TabContentProps) => {
 };
 
 const TimelineTab = ({ engine, tile }: TabContentProps) => {
-	const time = () => engine.time.value();
+	const time = () => engine.time.value() as Time;
 	return (
 		<div class="p-4">
 			<h3 class="text-lg font-bold mb-2">Timeline</h3>
