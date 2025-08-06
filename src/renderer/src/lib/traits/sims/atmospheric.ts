@@ -11,7 +11,7 @@ import { type Entity, Event, Name, Named, Storeable, Timed } from "..";
 import type { Existable } from "../types";
 
 // const TICKS_PER_SECOND = import.meta.env.DEV ? 1 : 3;
-const TICKS_PER_SECOND = 3;
+const TICKS_PER_SECOND = 1;
 const TICKS_PER_MINUTE = TICKS_PER_SECOND * (TICKS_PER_SECOND * 2);
 const TICKS_PER_HOUR = TICKS_PER_MINUTE * TICKS_PER_SECOND;
 
@@ -102,6 +102,70 @@ export interface Atmosphere extends Existable {
 	compute: () => void;
 }
 
+export const Atmosphere: Component<Atmosphere, {}> = (base) => {
+	const e = base as Existable & Atmosphere;
+
+	e.compute = () => {
+		const time = e.engine.time;
+		// Time calculations
+		const hour = Number(time.Hour) + Number(time.Minute) / 60;
+		const timeOfDay = hour / 3; // 0..1
+
+		// Season calculations
+		const seasonIndex = time.SeasonIndex; // 0:Spring, 1:Summer, 2:Autumn, 3:Winter
+		// More moderate seasonal changes: -5 in winter, +5 in summer, 0 in spring/autumn
+		const seasonOffsets = [0, 5, 0, -5];
+		const seasonOffset = seasonOffsets[seasonIndex];
+
+		// Daily fluctuation (sine wave, amplitude 2)
+		const dailyOffset = Math.sin(timeOfDay * Math.PI * 2) * 2;
+
+		for (let x = 0; x < e.engine.mapBuilder.width; x++) {
+			for (let y = 0; y < e.engine.mapBuilder.height; y++) {
+				const tile = e.engine.mapBuilder?.tiles?.[x]?.[y];
+				if (tile) {
+					// Higher elevations should be colder (temperature decreases with altitude)
+					// Base temperature of 15°C at sea level, decreases by 6.5°C per 1000m elevation
+					// Assuming elevation is 0-1 scale, multiply by 1000 to get meters, then apply lapse rate
+					const elevationInMeters = tile.elevation * 1000;
+					const temperatureLapseRate = 11; // °C per 1000m
+					const baseTemperature =
+						15 - (elevationInMeters / 1000) * temperatureLapseRate;
+
+					tile.temperature = baseTemperature + seasonOffset + dailyOffset;
+					e.engine.mapBuilder.tiles[x][y] = tile;
+				}
+			}
+		}
+	};
+
+	return e;
+};
+
+export function createAtmosphere(e: Engine) {
+	const base = {
+		engine: e,
+		_components: Immutable.Set<symbol>(),
+	};
+	const built = new EntityBuilder(base)
+		.add(Named, { name: "atmosphere" })
+		.add(Atmosphere, {})
+		.add(Storeable, "atmosphere")
+		.add(Syncable, "atmosphere")
+		.build();
+
+	const builder = new EntityBuilder(built).add(
+		Timed,
+		Event("Atmosphere", TICKS_PER_HOUR, () => {
+			built.compute();
+			built.update({ ...built });
+		}),
+	);
+
+	const final = builder.build();
+	return final;
+}
+
 export const createHeatMap = async (e: Engine, eMapInit: number[]) => {
 	await e.mapBuilder.gpu.init();
 	const device = e.mapBuilder.gpu.getDevice();
@@ -120,7 +184,6 @@ export const createHeatMap = async (e: Engine, eMapInit: number[]) => {
 		d.struct({
 			map_dims: d.vec2i,
 		}),
-
 		{
 			map_dims,
 		},
@@ -163,5 +226,19 @@ export const createHeatMap = async (e: Engine, eMapInit: number[]) => {
 	});
 	const pipeline = gpu["~unstable"].withCompute(rootFn).createPipeline();
 	pipeline.dispatchWorkgroups(workgroupCountX, workgroupCountY);
-	return heatMap.read();
+	const result = await heatMap.read();
+
+	// Validate that all temperatures are valid numbers
+	const invalidTemps = result.filter((temp) => !isFinite(temp));
+	if (invalidTemps.length > 0) {
+		console.warn(
+			"Invalid temperatures generated:",
+			invalidTemps.length,
+			"out of",
+			result.length,
+		);
+		console.warn("Sample invalid temps:", invalidTemps.slice(0, 5));
+	}
+
+	return result;
 };

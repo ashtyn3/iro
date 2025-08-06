@@ -354,6 +354,10 @@ export class GMap {
 			this.tiles[x] = [];
 			for (let y = 0; y < this.height; y++) {
 				const elev = this.map[x][y];
+				const rawTemp = heatMap[x + y * this.width];
+				const temperature =
+					typeof rawTemp === "number" && isFinite(rawTemp) ? rawTemp : 20; // Default temperature if invalid
+
 				const tile: Tile = {
 					fg: undefined,
 					bg: undefined,
@@ -362,7 +366,7 @@ export class GMap {
 					mask: null,
 					kind: TileKinds.grass,
 					elevation: elev,
-					temperature: heatMap[x + y * this.width],
+					temperature: temperature,
 				};
 
 				if (elev <= 0) {

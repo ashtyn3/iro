@@ -27,7 +27,11 @@ import { DB, type State, Vec2d } from "./state";
 import { Storage } from "./storage";
 import type { Syncable } from "./sync";
 import { Renderable, type Timed } from "./traits";
-import { createTime, type Time } from "./traits/sims/atmospheric";
+import {
+	createAtmosphere,
+	createTime,
+	type Time,
+} from "./traits/sims/atmospheric";
 import type { Storeable } from "./traits/storeable";
 import type { InputEvent, MapInfo } from "./types";
 
@@ -60,6 +64,7 @@ export class Engine {
 			closings: Howl;
 		};
 	};
+	atmosphere: any;
 
 	constructor(w: number, h: number, storage: Storage) {
 		this.width = w;
@@ -117,6 +122,7 @@ export class Engine {
 		this.infoMenu = infoMenu.build();
 		this.mouse = createMouseMoveListener(this);
 		this.time = createTime(this);
+		this.atmosphere = createAtmosphere(this);
 	}
 
 	async loadAudio() {
