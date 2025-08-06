@@ -262,19 +262,13 @@ export class DB {
 	}
 
 	async saveMaterials(tileSetId: string, materials: Material[]): Promise<void> {
-		const encodedMaterials = encode(materials);
-		const compressedMaterials = await this.compressGzip(encodedMaterials);
-		// TODO: Implement saveMaterials - store compressed materials
+		// const encodedMaterials = encode(materials);
+		// const compressedMaterials = await this.compressGzip(encodedMaterials);
+		await Storage.instance.saveMaterials(tileSetId, materials);
 	}
 
 	async loadMaterials(tileSetId: string): Promise<Material[]> {
-		// TODO: Implement loadMaterials - retrieve and decompress materials
-		const materials = null; // TODO: Get from your database
-		if (materials) {
-			const decompressedMaterials = await this.decompressGzip(materials);
-			return decode(decompressedMaterials) as Material[];
-		}
-		return [];
+		return Storage.instance.loadMaterials(tileSetId);
 	}
 
 	async updateViewportTiles(

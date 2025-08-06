@@ -4,6 +4,7 @@ import type {
 	GameSettings,
 	LoadMapContentResult,
 	MapInfo,
+	Material,
 	TileSetParams,
 	TileUpdate,
 	UpdateViewportResult,
@@ -58,4 +59,8 @@ export interface StorageAPI {
 	getSettings: () => Promise<GameSettings | undefined>;
 	createSettings: () => Promise<void>;
 	updateSettings: (settings: GameSettings) => Promise<void>;
+
+	// Materials operations
+	saveMaterials: (mapId: string, materials: Material[]) => Promise<void>;
+	loadMaterials: (mapId: string) => Promise<Material[]>;
 }

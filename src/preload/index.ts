@@ -37,6 +37,10 @@ const storageAPI: StorageAPI = {
 	getSettings: storage.getSettings.bind(storage),
 	createSettings: storage.createSettings.bind(storage),
 	updateSettings: storage.updateSettings.bind(storage),
+
+	// Materials operations
+	saveMaterials: storage.saveMaterials.bind(storage),
+	loadMaterials: storage.loadMaterials.bind(storage),
 };
 
 // Custom APIs for renderer

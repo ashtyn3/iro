@@ -6,7 +6,12 @@ import { nanoid } from "nanoid";
 import SuperJSON from "superjson";
 import { defaultKeys } from "../renderer/src/default_keys";
 import type { Cluster, Clusters } from "../renderer/src/lib/map";
-import type { GameSettings, Letter, MapInfo } from "../renderer/src/lib/types";
+import type {
+	GameSettings,
+	Letter,
+	MapInfo,
+	Material,
+} from "../renderer/src/lib/types";
 
 export enum StoreType {
 	Map = "map",
@@ -524,6 +529,19 @@ export class Storage {
 			const orphanPath = path.join(mapPath, orphanFileName);
 			fs.unlinkSync(orphanPath);
 		}
+	}
+
+	public async saveMaterials(mapId: string, materials: Material[]) {
+		const mapPath = path.join(DIR_MAPPING[StoreType.Map], mapId);
+		const filePath = path.join(mapPath, "materials.data");
+		fs.writeFileSync(filePath, SuperJSON.stringify(materials));
+	}
+
+	public async loadMaterials(mapId: string): Promise<Material[]> {
+		const mapPath = path.join(DIR_MAPPING[StoreType.Map], mapId);
+		const filePath = path.join(mapPath, "materials.data");
+		const data = fs.readFileSync(filePath, "utf8");
+		return SuperJSON.parse(data) as Material[];
 	}
 
 	public async saveEntityState(
