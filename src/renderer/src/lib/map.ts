@@ -46,10 +46,14 @@ export const VIEWPORT: Vec2d = Vec2d({ x: 80, y: 40 });
 export const CELL_SIZE = 80;
 export const CELL_AREA_KM2 = (CELL_SIZE / 1000) ** 2;
 
+export type Vec2dPlain = {
+	x: number;
+	y: number;
+};
 export type Cluster = {
 	kind: TileKinds;
-	points: Vec2d[];
-	center: Vec2d;
+	points: Vec2dPlain[];
+	center: Vec2dPlain;
 	oreName?: string;
 };
 
@@ -523,6 +527,7 @@ export class GMap {
 		this.mapHeader = header;
 		this.tiles = await db.loadTiles(id);
 		const clusters = await db.loadClusters(id);
+		this.engine.debug.info("Loaded clusters for map", clusters);
 
 		this.engine.debug.info(`Loaded clusters for map ${id}:`, clusters);
 
@@ -600,6 +605,7 @@ export class GMap {
 			{
 				act: async () => {
 					await db.saveTiles(this.mapId, this.tiles);
+					console.log("Saving clusters", this.computedClusters);
 					await db.saveClusters(this.mapId, this.computedClusters);
 					await db.saveMaterials(this.mapId, this.materials);
 					this.saved = true;
@@ -1025,16 +1031,16 @@ export class GMap {
 					if (kind === TileKinds.ore) {
 						clusters[TileKinds.ore].push({
 							kind: TileKinds.ore,
-							points: points.map((p) => Vec2d({ x: p.x, y: p.y })),
-							center: Vec2d({ x: center.x, y: center.y }),
+							points,
+							center,
 							oreName: this.tiles[center.x][center.y].oreName,
 						});
 						continue;
 					}
 					(clusters[kind] as Cluster[]).push({
 						kind,
-						points: points.map((p) => Vec2d({ x: p.x, y: p.y })),
-						center: Vec2d({ x: center.x, y: center.y }),
+						points,
+						center,
 					});
 				} else {
 					console.warn(`Unknown cluster kind: ${kind}`);
