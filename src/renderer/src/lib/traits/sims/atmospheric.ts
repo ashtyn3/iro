@@ -5,9 +5,9 @@ import * as d from "typegpu/data";
 import * as std from "typegpu/std";
 import type { Engine } from "~/lib";
 import type { Component } from "../../comps";
-import { createEntity, EntityBuilder } from "../../entity";
+import { EntityBuilder } from "../../entity";
 import { Syncable } from "../../sync";
-import { type Entity, Event, Name, Named, Storeable, Timed } from "..";
+import { Event, Named, Storeable, Timed } from "..";
 import type { Existable } from "../types";
 
 // const TICKS_PER_SECOND = import.meta.env.DEV ? 1 : 3;
