@@ -9,6 +9,7 @@ export default function Pause({ engine }: { engine: Engine }) {
 			<Button
 				onClick={async () => {
 					await engine.time.store();
+					await (window as any).electronAPI.leaveFullScreen();
 					window.location.reload();
 				}}
 			>

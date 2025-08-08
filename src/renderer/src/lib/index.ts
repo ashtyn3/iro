@@ -395,14 +395,7 @@ export class Engine {
 				confirm("Confirm refresh");
 			}
 		};
-		document.documentElement.requestFullscreen({
-			navigationUI: "hide",
-		});
-		window.addEventListener("fullscreenchange", (e) => {
-			if (!document.fullscreenElement) {
-				window.location.reload();
-			}
-		});
+		await (window as any).electronAPI.enterFullScreen();
 
 		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
 		const d = DarkThing(this, Vec2d({ x: 10, y: 13 }));

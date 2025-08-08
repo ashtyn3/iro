@@ -1,4 +1,4 @@
-import { contextBridge } from "electron";
+import { contextBridge, ipcRenderer } from "electron";
 import type { StorageAPI } from "../shared/storage-types";
 import { Storage } from "./storage";
 
@@ -46,6 +46,24 @@ const storageAPI: StorageAPI = {
 // Custom APIs for renderer
 const api = {
 	storage: storageAPI,
+	enterFullScreen: async () => {
+		let enterFullScreen = false;
+		ipcRenderer.send("set-fullscreen", true);
+		ipcRenderer.on("enter-full-screen", () => {
+			enterFullScreen = true;
+		});
+		while (!enterFullScreen) {}
+		return enterFullScreen;
+	},
+	leaveFullScreen: async () => {
+		let enterFullScreen = true;
+		ipcRenderer.send("set-fullscreen", false);
+		ipcRenderer.on("leave-full-screen", () => {
+			enterFullScreen = true;
+		});
+		while (!enterFullScreen) {}
+		return enterFullScreen;
+	},
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

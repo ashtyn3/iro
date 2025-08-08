@@ -57,6 +57,15 @@ app.whenReady().then(() => {
 
 	// IPC test
 	ipcMain.on("ping", () => console.log("pong"));
+	ipcMain.on("set-fullscreen", (_, fullscreen) => {
+		BrowserWindow.getAllWindows()[0].setFullScreen(fullscreen);
+		BrowserWindow.getAllWindows()[0].on("enter-full-screen", () => {
+			ipcMain.emit("enter-full-screen");
+		});
+		BrowserWindow.getAllWindows()[0].on("leave-full-screen", () => {
+			ipcMain.emit("leave-full-screen");
+		});
+	});
 
 	createWindow();
 
