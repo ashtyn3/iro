@@ -1,5 +1,5 @@
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, shell } from "electron";
 import { join } from "path";
 import icon from "../../resources/icon.png?asset";
 
@@ -19,8 +19,33 @@ function createWindow(): void {
 			contextIsolation: true,
 			nodeIntegrationInWorker: true,
 			sandbox: false,
+			devTools: !app.isPackaged,
 		},
 	});
+	const template = [
+		{
+			label: "Iro",
+			submenu: [
+				{
+					label: "Quit",
+					click: () => app.quit(),
+				},
+			],
+		},
+	];
+	if (is.dev) {
+		template.push({
+			label: "DevTools",
+			submenu: [
+				{
+					label: "Toggle DevTools",
+					click: () => mainWindow.webContents.toggleDevTools(),
+				},
+			],
+		});
+	}
+	Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+	mainWindow.setMenu(null);
 
 	mainWindow.on("ready-to-show", () => {
 		mainWindow.show();

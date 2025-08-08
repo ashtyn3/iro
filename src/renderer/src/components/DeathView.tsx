@@ -6,6 +6,7 @@ export default function DeathView({ engine }: { engine: Engine }) {
 		const db = new DB(null as any);
 		await db.death(engine.mapBuilder.mapId as any);
 		window.onbeforeunload = () => {};
+		await (window as any).electronAPI.leaveFullScreen();
 		window.location.reload();
 	};
 	return (

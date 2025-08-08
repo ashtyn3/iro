@@ -1,5 +1,5 @@
 appId: land.ashtyn.iro
-productName: iro
+productName: Iro
 directories:
   buildResources: build
 icon: resources/icon.png
@@ -13,7 +13,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: iro
+  executableName: Iro
   icon: resources/icon.png
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
