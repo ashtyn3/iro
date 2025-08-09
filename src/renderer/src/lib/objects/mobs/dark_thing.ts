@@ -1,19 +1,17 @@
-import Msg from "~/components/Msg";
-import { EntityBuilder, EntityRegistry } from "~/lib/entity";
+import { EntityBuilder } from "~/lib/entity";
 import {
 	Destructible,
 	Event,
-	Movable,
-	Name,
-	Named,
 	Renderable,
-	Storeable,
 	secondsToFrames,
 	Timed,
 } from "~/lib/traits";
 import { Pathed } from "~/lib/traits/pathed";
 import type { Engine } from "../..";
-import { GMap } from "../../map";
+
+// Use a fixed seek radius independent of view radius to avoid expensive A* over large areas
+const DARK_THING_SEEK_RADIUS = 16;
+
 import { createGObject, Unique } from "../../object";
 import { Vec2d } from "../../types";
 
@@ -39,21 +37,8 @@ export const DarkThing = (e: Engine, pos: Vec2d) => {
 		.add(Unique, {})
 		.add(Pathed, {
 			seeking: "player",
-			maxDistance: GMap.VIEW_RADIUS_BASE,
+			maxDistance: DARK_THING_SEEK_RADIUS,
 			minDistance: 1,
-			passable: (x, y) => {
-				const target = EntityRegistry.instance.lookupAndQuery(
-					[Movable, Name("fire")],
-					(e) => {
-						const distance = calcDistanceBtwVecs(Vec2d({ x, y }), e.position);
-						if (distance > GMap.VIEW_RADIUS_BASE - 2) {
-							return false;
-						}
-						return true;
-					},
-				);
-				return target.length === 0;
-			},
 		})
 		.add(Timed, events)
 		.build();

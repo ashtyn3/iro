@@ -47,7 +47,31 @@ export const Pathed: Component<
 		if (distance <= minDistance) {
 			return;
 		}
-		if (distance >= maxDistance) {
+		if (distance > maxDistance) {
+			// Greedy step towards the target to close distance without expensive A*
+			let bestStep: Vec2d | null = null;
+			let bestScore = Number.POSITIVE_INFINITY;
+			for (let ox = -1; ox <= 1; ox++) {
+				for (let oy = -1; oy <= 1; oy++) {
+					if (ox === 0 && oy === 0) continue;
+					const nx = e.position.x + ox;
+					const ny = e.position.y + oy;
+					if (nx < 0 || ny < 0 || nx >= e.engine.width || ny >= e.engine.height)
+						continue;
+					const tile = e.engine.mapBuilder.tiles[nx]?.[ny];
+					if (!tile || tile.boundary) continue;
+					const ddx = target.position.x - nx;
+					const ddy = target.position.y - ny;
+					const score = ddx * ddx + ddy * ddy; // squared distance
+					if (score < bestScore) {
+						bestScore = score;
+						bestStep = Vec2d({ x: ox, y: oy });
+					}
+				}
+			}
+			if (bestStep) {
+				e.move(bestStep);
+			}
 			return;
 		}
 
@@ -57,6 +81,17 @@ export const Pathed: Component<
 
 		const isPassable = (x: number, y: number) => {
 			if (x < 0 || y < 0 || x >= e.engine.width || y >= e.engine.height) {
+				return false;
+			}
+			// Bound search: allow nodes that are within the box around either the target OR the seeker.
+			// This keeps A* reasonable while still permitting necessary detours.
+			const outOfTargetBox =
+				Math.abs(x - target.position.x) > maxDistance ||
+				Math.abs(y - target.position.y) > maxDistance;
+			const outOfSeekerBox =
+				Math.abs(x - e.position.x) > maxDistance ||
+				Math.abs(y - e.position.y) > maxDistance;
+			if (outOfTargetBox && outOfSeekerBox) {
 				return false;
 			}
 			const tile = e.engine.mapBuilder.tiles[x]?.[y];

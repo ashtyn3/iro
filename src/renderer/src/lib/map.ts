@@ -116,7 +116,7 @@ export interface Tile {
 }
 
 export class GMap {
-	public static readonly VIEW_RADIUS_BASE = 10;
+	public static readonly VIEW_RADIUS_BASE = 12;
 	public static readonly DITHER_RADIUS = 10;
 	public static readonly SUPER_FAR_RADIUS = 20;
 	public static readonly DITHER_STEPS = 5;

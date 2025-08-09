@@ -1,5 +1,4 @@
-import { COLORS, MaterialRegistry } from "~/lib/material";
-import { Debug } from "./debug";
+import { MaterialRegistry } from "~/lib/material";
 import { EntityRegistry } from "./entity";
 import {
 	CELL_H_PX,
@@ -25,7 +24,7 @@ export class GPURenderer {
 	private cachedColorBuffer: GPUBuffer | null = null;
 	private colorCacheKey: string = "";
 	private cachedDevice: GPUDevice | null = null;
-	private needsColorCacheRefresh: boolean = false;
+    
 
 	async init() {
 		if (!navigator.gpu) {
@@ -59,7 +58,7 @@ export class GPURenderer {
 		return parseInt(hex.slice(1), 16);
 	}
 
-	private collectLightSources(viewport: Vec2d): LightSource[] {
+    private collectLightSources(_viewport: Vec2d): LightSource[] {
 		const lightEmitters = EntityRegistry.instance.lookup([
 			LightEmitter,
 			Movable,
@@ -67,19 +66,12 @@ export class GPURenderer {
 		]);
 		const lights: LightSource[] = [];
 
-		for (const emitter of lightEmitters) {
-			const lightSource = emitter.getLightSource();
-			const lightX = lightSource.position.x;
-			const lightY = lightSource.position.y;
-			const lightRadius = lightSource.radius;
-
-			const viewportRight = viewport.x + VIEWPORT.x;
-			const viewportBottom = viewport.y + VIEWPORT.y;
-
-			if (emitter.inViewportWR()) {
-				lights.push(lightSource);
-			}
-		}
+        for (const emitter of lightEmitters) {
+            const lightSource = emitter.getLightSource();
+            if (emitter.inViewportWR()) {
+                lights.push(lightSource);
+            }
+        }
 
 		return lights;
 	}
@@ -276,9 +268,9 @@ export class GPURenderer {
 		lightCount: number;
 		yScale: number;
 	}): GPUBuffer {
-		const STEPS = GMap.DITHER_STEPS;
-		const DITHER_RADIUS = GMap.DITHER_RADIUS;
-		const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
+        const STEPS = GMap.DITHER_STEPS;
+        const DITHER_RADIUS = GMap.DITHER_RADIUS;
+        const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
 
 		const paramsData = new ArrayBuffer(48);
 		const view = new DataView(paramsData);
@@ -291,7 +283,9 @@ export class GPURenderer {
 		view.setUint32(20, VIEWPORT.y, true);
 		view.setFloat32(24, params.viewRadius, true);
 		view.setFloat32(28, DITHER_RADIUS, true);
-		view.setFloat32(32, SUPER_FAR_RADIUS, true);
+        // Ensure super-far radius is beyond view radius + dither to avoid negative ranges
+        const superFar = Math.max(SUPER_FAR_RADIUS, params.viewRadius + DITHER_RADIUS + 1);
+        view.setFloat32(32, superFar, true);
 		view.setUint32(36, STEPS, true);
 		view.setUint32(40, params.lightCount, true);
 		view.setFloat32(44, params.yScale, true);
