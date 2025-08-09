@@ -42,7 +42,33 @@ export enum TileKinds {
 	ore,
 }
 
-export const VIEWPORT: Vec2d = Vec2d({ x: 80, y: 40 });
+export let VIEWPORT: Vec2d = (() => {
+	// DOS VGA fonts are typically 8x16 (width x height). When not forcing
+	// square cells, we should size the viewport using distinct width/height.
+	const CELL_H = 16; // matches ROT.Display fontSize
+	const CELL_W = 8; // approximate glyph width for MorePerfectDOSVGA
+	const screenW = window?.innerWidth || 960;
+	const screenH = window?.innerHeight || 480;
+	const x = Math.floor(screenW / CELL_W);
+	const y = Math.floor(screenH / CELL_H);
+	return Vec2d({ x, y });
+})();
+
+export const setViewport = (x: number, y: number) => {
+	VIEWPORT = Vec2d({ x, y });
+};
+
+// Cell metrics in CSS pixels for anisotropic distance correction
+export let CELL_W_PX = 8;
+export let CELL_H_PX = 16;
+export let CELL_ASPECT = CELL_W_PX / CELL_H_PX; // scale applied to dy when measuring distance
+export const setCellMetrics = (wPx: number, hPx: number) => {
+	if (wPx > 0 && hPx > 0) {
+		CELL_W_PX = Math.floor(wPx);
+		CELL_H_PX = Math.floor(hPx);
+		CELL_ASPECT = CELL_W_PX / CELL_H_PX;
+	}
+};
 export const CELL_SIZE = 80;
 export const CELL_AREA_KM2 = (CELL_SIZE / 1000) ** 2;
 
@@ -702,8 +728,10 @@ export class GMap {
 				const wy = vp.y + sy;
 				const tile = this.tiles[wx][wy];
 
+				// Correct distance for non-square cells so circles render as circles
 				const dx = wx - this.engine.player.position.x;
-				const dy = wy - this.engine.player.position.y;
+				const dy =
+					(wy - this.engine.player.position.y) * (CELL_H_PX / CELL_W_PX);
 				const dist = Math.sqrt(dx * dx + dy * dy);
 
 				let cols: { close: string; far: string; superFar: string };
@@ -838,7 +866,7 @@ export class GMap {
 		let hasLightInfluence = false;
 		for (const light of lights) {
 			const lightDx = worldX - light.position.x;
-			const lightDy = worldY - light.position.y;
+			const lightDy = (worldY - light.position.y) * (CELL_H_PX / CELL_W_PX);
 			const lightDist = Math.sqrt(lightDx * lightDx + lightDy * lightDy);
 			if (lightDist <= light.radius) {
 				hasLightInfluence = true;
@@ -866,7 +894,7 @@ export class GMap {
 		// Process each light source that affects this tile
 		for (const light of lights) {
 			const lightDx = worldX - light.position.x;
-			const lightDy = worldY - light.position.y;
+			const lightDy = (worldY - light.position.y) * (CELL_H_PX / CELL_W_PX);
 			const lightDist = Math.sqrt(lightDx * lightDx + lightDy * lightDy);
 
 			// Only apply light if within radius

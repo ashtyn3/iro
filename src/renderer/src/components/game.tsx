@@ -98,16 +98,16 @@ export default function Game({ engine }: { engine: Engine }) {
 		const isSaving = createMemo(() => engine.mapBuilder.isFlushingQueue);
 
 		return (
-			<div class="w-full h-full bg-black">
+			<div class="w-full h-full bg-black flex flex-col">
 				<SaveIndicator engine={engine} />
 				{menu().Menu()}
-				<div class="flex flex-row justify-between">
+				<div class="flex flex-row justify-between items-center shrink-0">
 					<p>{player().air}% Air</p>
 					<HealthBar engine={engine} />
 					<Inventory engine={engine} />
 				</div>
-				<div id="gamebox"></div>
-				<div class="flex flex-row gap-2 justify-center m-5">
+				<div id="gamebox" class="flex-1 min-h-0 overflow-hidden"></div>
+				<div class="flex flex-row gap-2 justify-center m-5 shrink-0">
 					<div class="border-2 border-white">
 						<img
 							src={player().hands.left.sprite[0]}

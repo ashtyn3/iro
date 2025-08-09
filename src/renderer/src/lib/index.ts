@@ -12,7 +12,7 @@ import {
 	type MenuHolder,
 } from "./inventory";
 import { KeyHandles, keyMap } from "./keyhandle";
-import { GMap, VIEWPORT } from "./map";
+import { GMap, setCellMetrics, setViewport, VIEWPORT } from "./map";
 import { COLORS } from "./material";
 import {
 	createMouseMoveListener,
@@ -20,6 +20,7 @@ import {
 	type MouseMoveListener,
 } from "./mouse";
 import { Fire } from "./objects/fire";
+import { GenericMachine } from "./objects/generic_machine";
 import { calcDistanceBtwVecs, DarkThing } from "./objects/mobs/dark_thing";
 import { Player, type PlayerType } from "./player";
 import { DB, type State, Vec2d } from "./state";
@@ -81,7 +82,7 @@ export class Engine {
 
 		const TILES_X = VIEWPORT.x;
 		const TILES_Y = VIEWPORT.y;
-		const FONT_PX = 24;
+		const FONT_PX = 16;
 
 		this.display = new ROT.Display({
 			width: TILES_X,
@@ -89,7 +90,7 @@ export class Engine {
 			fontSize: FONT_PX,
 			fontFamily:
 				"MorePerfectDOSVGA, Courier New, Courier, Consolas, Monaco, Lucida Console, monospace",
-			forceSquareRatio: true,
+			forceSquareRatio: false,
 		});
 
 		this.mapBuilder = new GMap(this.width, this.height, this, this.storage, "");
@@ -311,12 +312,67 @@ export class Engine {
 	async renderDOM() {
 		const canvas = this.display.getContainer() as HTMLCanvasElement;
 
-		canvas.style.width = "100%";
-		canvas.style.height = "100%";
 		canvas.style.imageRendering = "pixelated";
+		canvas.style.imageRendering = "crisp-edges";
 		canvas.style.display = "block";
 		canvas.style.backgroundColor = "#000";
-		canvas.style.objectFit = "contain";
+
+		const measureGlyphWidth = (): number => {
+			const tmp = document.createElement("canvas");
+			const ctx = tmp.getContext("2d");
+			if (!ctx) return 8;
+			ctx.font = `${this.display.getOptions().fontSize}px ${this.display.getOptions().fontFamily}`;
+			return Math.ceil(ctx.measureText("M").width) || 8;
+		};
+
+		const fitCanvasToWindow = () => {
+			const CELL_W = measureGlyphWidth();
+			const CELL_H = this.display.getOptions().fontSize as number;
+			setCellMetrics(CELL_W, CELL_H);
+			let cols = Math.max(1, Math.floor(window.innerWidth / CELL_W));
+			const rows = Math.max(1, Math.floor(window.innerHeight / CELL_H));
+			setViewport(cols, rows);
+			this.display.setOptions({ width: cols, height: rows });
+
+			const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+			const intrinsicCssWidth = canvas.width / dpr;
+			const intrinsicCssHeight = canvas.height / dpr;
+
+			let maxScaleXFloor =
+				Math.floor(window.innerWidth / intrinsicCssWidth) || 1;
+			let maxScaleYFloor =
+				Math.floor(window.innerHeight / intrinsicCssHeight) || 1;
+			const maxScaleXCeil =
+				Math.ceil(window.innerWidth / intrinsicCssWidth) || 1;
+			let scale = Math.max(1, Math.min(maxScaleXFloor, maxScaleYFloor));
+
+			const desiredIntrinsicCssWidth = window.innerWidth / scale;
+			const additionalCols = Math.floor(
+				(desiredIntrinsicCssWidth - intrinsicCssWidth) / CELL_W,
+			);
+			if (additionalCols > 0) {
+				cols += additionalCols;
+				setViewport(cols, rows);
+				this.display.setOptions({ width: cols, height: rows });
+				const dpr2 = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+				const intrinsicCssWidth2 = canvas.width / dpr2;
+				const intrinsicCssHeight2 = canvas.height / dpr2;
+				maxScaleXFloor =
+					Math.floor(window.innerWidth / intrinsicCssWidth2) || 1;
+				maxScaleYFloor =
+					Math.floor(window.innerHeight / intrinsicCssHeight2) || 1;
+				scale = Math.max(1, Math.min(maxScaleXFloor, maxScaleYFloor));
+			}
+
+			const cssWidth = Math.round((canvas.width / dpr) * scale);
+			const cssHeight = Math.round((canvas.height / dpr) * scale);
+
+			canvas.style.width = `${cssWidth}px`;
+			canvas.style.height = `${cssHeight}px`;
+		};
+
+		fitCanvasToWindow();
+		window.addEventListener("resize", fitCanvasToWindow);
 
 		this.engine.lock();
 		this.engine.start();
@@ -343,8 +399,38 @@ export class Engine {
 
 		let lastPos: Vec2d | null = null;
 		document.getElementById("gamebox")?.addEventListener("mousemove", (e) => {
-			const viewportPos = this.display.eventToPosition(e);
-			const viewportVec = Vec2d({ x: viewportPos[0], y: viewportPos[1] });
+			const canvasRect = (canvas as HTMLCanvasElement).getBoundingClientRect();
+			const intrinsicWidth = (canvas as HTMLCanvasElement).width;
+			const intrinsicHeight = (canvas as HTMLCanvasElement).height;
+			const contentAspect = intrinsicWidth / intrinsicHeight;
+			const rectAspect = canvasRect.width / canvasRect.height;
+
+			let contentWidth = canvasRect.width;
+			let contentHeight = canvasRect.height;
+			let offsetX = 0;
+			let offsetY = 0;
+			if (rectAspect > contentAspect) {
+				contentHeight = canvasRect.height;
+				contentWidth = contentHeight * contentAspect;
+				offsetX = (canvasRect.width - contentWidth) / 2;
+			} else {
+				contentWidth = canvasRect.width;
+				contentHeight = contentWidth / contentAspect;
+				offsetY = (canvasRect.height - contentHeight) / 2;
+			}
+
+			const relX = Math.max(
+				0,
+				Math.min(e.clientX - canvasRect.left - offsetX, contentWidth),
+			);
+			const relY = Math.max(
+				0,
+				Math.min(e.clientY - canvasRect.top - offsetY, contentHeight),
+			);
+
+			const col = Math.floor((relX / contentWidth) * VIEWPORT.x);
+			const row = Math.floor((relY / contentHeight) * VIEWPORT.y);
+			const viewportVec = Vec2d({ x: col, y: row });
 
 			const worldVec = Vec2d({
 				x: this.viewport().x + viewportVec.x,
@@ -393,6 +479,23 @@ export class Engine {
 		await (window as any).electronAPI.enterFullScreen();
 
 		const f = Fire(this, Vec2d({ x: 5, y: 5 }));
+		const g = GenericMachine(
+			this,
+			Vec2d({ x: 10, y: 10 }),
+			Vec2d({ x: 3, y: 3 }),
+			{
+				corners: {
+					topLeft: "┌",
+					topRight: "┐",
+					bottomLeft: "└",
+					bottomRight: "┘",
+				},
+				horizontal: "─",
+				vertical: "│",
+				center: "µ",
+				centerFill: false,
+			},
+		);
 		const d = DarkThing(this, Vec2d({ x: 10, y: 13 }));
 		const frame = async () => {
 			if (this.clockSystem.state === "paused") {

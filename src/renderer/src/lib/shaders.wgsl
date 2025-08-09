@@ -41,6 +41,7 @@ struct RenderParams {
     super_far_radius: f32,
     steps: u32,
     light_count: u32,
+    y_scale: f32,
 }
 
 struct PixelOutput {
@@ -92,7 +93,7 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
     for (var i = 0u; i < params.light_count; i = i + 1u) {
         let light = light_sources[i];
         let light_dx = world_x - light.x;
-        let light_dy = world_y - light.y;
+        let light_dy = (world_y - light.y) * params.y_scale;
         let light_dist = sqrt(light_dx * light_dx + light_dy * light_dy);
         if light_dist <= light.radius {
             has_light_influence = true;
@@ -188,7 +189,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let tile = tiles[tile_index];
 
     let dx = wx - params.player_x;
-    let dy = wy - params.player_y;
+    let dy = (wy - params.player_y) * params.y_scale;
     let dist = sqrt(dx * dx + dy * dy);
 
     var color_index = tile.color_index;

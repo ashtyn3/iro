@@ -240,7 +240,7 @@ export default function Menu() {
 			)}
 
 			{currentState() === "game" && (
-				<div id="game" class="flex flex-col h-[90vh] w-[90vw] max-w-[1200px]">
+				<div id="game" class="flex flex-col w-screen h-screen">
 					<Show when={engine()}>
 						<Game engine={engine()!} />
 					</Show>

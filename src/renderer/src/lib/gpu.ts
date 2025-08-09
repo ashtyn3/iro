@@ -1,7 +1,14 @@
 import { COLORS, MaterialRegistry } from "~/lib/material";
 import { Debug } from "./debug";
 import { EntityRegistry } from "./entity";
-import { GMap, type Tile, TileKinds, VIEWPORT } from "./map";
+import {
+	CELL_H_PX,
+	CELL_W_PX,
+	GMap,
+	type Tile,
+	TileKinds,
+	VIEWPORT,
+} from "./map";
 import shader from "./shaders.wgsl?raw";
 import { LightEmitter, type LightSource, Movable, Named } from "./traits";
 import { Vec2d } from "./types";
@@ -84,6 +91,7 @@ export class GPURenderer {
 			const light = lights[i];
 			const offset = i * 6;
 			lightData[offset] = light.position.x;
+			// Keep Y unscaled; shader applies params.y_scale consistently
 			lightData[offset + 1] = light.position.y;
 			lightData[offset + 2] = light.radius;
 			lightData[offset + 4] = light.intensity;
@@ -266,12 +274,13 @@ export class GPURenderer {
 		viewportY: number;
 		viewRadius: number;
 		lightCount: number;
+		yScale: number;
 	}): GPUBuffer {
 		const STEPS = GMap.DITHER_STEPS;
 		const DITHER_RADIUS = GMap.DITHER_RADIUS;
 		const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
 
-		const paramsData = new ArrayBuffer(44);
+		const paramsData = new ArrayBuffer(48);
 		const view = new DataView(paramsData);
 
 		view.setFloat32(0, params.playerX, true);
@@ -285,6 +294,7 @@ export class GPURenderer {
 		view.setFloat32(32, SUPER_FAR_RADIUS, true);
 		view.setUint32(36, STEPS, true);
 		view.setUint32(40, params.lightCount, true);
+		view.setFloat32(44, params.yScale, true);
 
 		const buffer = this.device.createBuffer({
 			size: paramsData.byteLength,
@@ -324,6 +334,8 @@ export class GPURenderer {
 			viewportY: viewport.y,
 			viewRadius,
 			lightCount: lights.length,
+			// scale dy by height/width so circles look round when cells are taller than wide
+			yScale: CELL_H_PX / CELL_W_PX,
 		});
 
 		const outputSize = VIEWPORT.x * VIEWPORT.y * 3 * 4;
