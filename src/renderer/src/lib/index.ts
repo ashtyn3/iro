@@ -2,7 +2,6 @@ import Letter from "@renderer/components/letter";
 import { Howl } from "howler";
 import * as ROT from "rot-js";
 import SimpleScheduler from "rot-js/lib/scheduler/simple";
-import { setMousePosition } from "~/components/info";
 import letterComponents from "~/lib/generators/letter-components.json";
 import { Clock } from "./clock";
 import { Debug } from "./debug";
@@ -115,10 +114,9 @@ export class Engine {
 		const infoMenu = createExtendedMenuHolder(this);
 		infoMenu.add(MouseMove, {
 			mousemove: (position: Vec2d) => {
-				setMousePosition(position);
+				this.infoMenu.update({ position: position.toJS() });
 			},
 		});
-
 		this.infoMenu = infoMenu.build();
 		this.mouse = createMouseMoveListener(this);
 		this.time = createTime(this);
@@ -359,20 +357,22 @@ export class Engine {
 				worldVec.x >= this.width ||
 				worldVec.y >= this.height
 			) {
-				// Clear cursor from last position
 				if (lastPos) {
 					this.mapBuilder.tiles[lastPos.x][lastPos.y].cursor = null;
 				}
+				const clamped = Vec2d({
+					x: Math.max(0, Math.min(worldVec.x, this.width - 1)),
+					y: Math.max(0, Math.min(worldVec.y, this.height - 1)),
+				});
+				this.mouse.position = clamped;
 				lastPos = null;
 				return;
 			}
 
-			// Clear cursor from last position
 			if (lastPos && !lastPos.equals(worldVec)) {
 				this.mapBuilder.tiles[lastPos.x][lastPos.y].cursor = null;
 			}
 
-			// Add cursor to current position
 			this.mapBuilder.tiles[worldVec.x][worldVec.y].cursor = {
 				fg: COLORS.colors().cursor.close,
 				bg: "",
@@ -380,12 +380,7 @@ export class Engine {
 			};
 
 			lastPos = worldVec;
-			const viewDistance = this.mapBuilder.viewableDistance();
-			const distance = calcDistanceBtwVecs(worldVec, this.player.position);
-			if (distance < viewDistance) {
-				this.mouse.position = worldVec;
-				return;
-			}
+			this.mouse.position = worldVec;
 		});
 
 		window.onbeforeunload = () => {

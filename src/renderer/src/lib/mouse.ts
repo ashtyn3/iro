@@ -2,6 +2,7 @@ import * as Immutable from "immutable";
 import type { Engine } from ".";
 import type { Component } from "./comps";
 import { EntityBuilder, EntityRegistry } from "./entity";
+import { Syncable } from "./sync";
 import { type Entity, Event, type Existable, Timed } from "./traits";
 import { Vec2d } from "./types";
 
@@ -23,6 +24,8 @@ export interface MouseMoveListener extends Existable {
 	lastPosition: Vec2d;
 }
 
+export type MouseEntity = MouseMoveListener & Syncable;
+
 export const createMouseMoveListener = (engine: Engine) => {
 	const e: MouseMoveListener = {
 		engine,
@@ -30,18 +33,18 @@ export const createMouseMoveListener = (engine: Engine) => {
 		position: Vec2d({ x: 0, y: 0 }),
 		lastPosition: Vec2d({ x: 0, y: 0 }),
 	};
-	const built = new EntityBuilder(e).add(
+	const built = new EntityBuilder(e).add(Syncable, "mouse").add(
 		Timed,
 		Event("mousemove", 1, () => {
 			EntityRegistry.instance.lookup([MouseMove]).forEach((m) => {
 				if (e.lastPosition.equals(e.position)) {
 					return;
 				}
-				m.mousemove(e.position);
 				e.lastPosition = e.position;
+				m.mousemove(e.position);
 			});
 		}),
 	);
 	const builtEntity = built.build();
-	return builtEntity;
+	return builtEntity as MouseEntity;
 };

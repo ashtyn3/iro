@@ -1,18 +1,22 @@
-import { createEffect, createSignal, For, type JSX, onMount } from "solid-js";
+import type { MouseMoveListener } from "@renderer/lib/mouse";
+import {
+	type Accessor,
+	createEffect,
+	createSignal,
+	For,
+	type JSX,
+	onMount,
+} from "solid-js";
 import { createStore } from "solid-js/store";
-import { type Tile, TileKinds, VIEWPORT } from "~/lib/map";
+import { type Tile, TileKinds } from "~/lib/map";
 import type { PlayerType } from "~/lib/player";
 import type { Time } from "~/lib/traits/sims/atmospheric";
-import { Vec2d } from "~/lib/types";
+import type { Vec2d } from "~/lib/types";
 import type { Engine } from "../lib";
 import Button from "./Button";
 
 // Types
 type TabName = "info" | "stats" | "timeline" | "close";
-
-export const [mousePosition, setMousePosition] = createSignal<Vec2d>(
-	Vec2d({ x: 0, y: 0 }),
-);
 
 interface TabHeaderProps {
 	children: JSX.Element;
@@ -23,7 +27,7 @@ interface TabHeaderProps {
 
 interface TabContentProps {
 	engine: Engine;
-	tile: () => Tile;
+	tile: () => Tile | undefined;
 }
 
 // Tab Header Component
@@ -46,35 +50,36 @@ const TabHeader = ({
 
 // Tab Content Components
 const InfoTab = ({ engine, tile }: TabContentProps) => {
-	const currentTile = () => tile();
-	const InfoHead = () => {
-		if (currentTile().oreName) {
-			return (
-				<>
-					<strong>Ore:</strong> {tile().oreName}
-				</>
-			);
-		}
-		return (
-			<>
-				<strong>Type:</strong> {TileKinds[currentTile().kind]}
-			</>
-		);
+	const [currentTile, setCurrentTile] = createSignal<Tile | undefined>();
+	const showMask = () => {
+		const t = currentTile();
+		return !!(t?.mask && t.mask.kind !== TileKinds.cursor);
+	};
+	const showOre = () => {
+		const t = currentTile();
+		return !!t?.oreName;
 	};
 	createEffect(() => {
-		console.log(currentTile());
+		setCurrentTile(tile());
 	});
-	const showMask = () =>
-		currentTile().mask && currentTile().mask?.kind !== TileKinds.cursor;
 
 	return (
 		<div class="p-4">
 			<h3 class="text-lg font-bold mb-2">Tile Information</h3>
 			<div class="space-y-2">
-				{currentTile().kind && <InfoHead />}
+				<p>
+					<strong>Tile:</strong>{" "}
+					{TileKinds[currentTile()?.kind ?? TileKinds.grass]}
+				</p>
 				{showMask() && (
 					<p>
-						<strong>Above:</strong> {TileKinds[currentTile().mask!.kind]}
+						<strong>Above:</strong>{" "}
+						{TileKinds[currentTile()?.mask?.kind ?? TileKinds.cursor] ?? "None"}
+					</p>
+				)}
+				{showOre() && (
+					<p>
+						<strong>Ore:</strong> {currentTile()?.oreName}
 					</p>
 				)}
 				{/* {currentTile().promotable && (
@@ -154,13 +159,35 @@ export default function Info({ engine }: { engine: Engine }) {
 	const [activeTab, setActiveTab] = createSignal<TabName>(
 		(localStorage.getItem("infoTab") as TabName) || "info",
 	);
-	const tile = () => {
-		return engine.mapBuilder.tiles[mousePosition().x][mousePosition().y];
-	};
+	const [currentTile, setCurrentTile] = createSignal<Tile | undefined>();
+
+	createEffect(() => {
+		const mp = engine.infoMenu.value() as MouseMoveListener;
+		const position = mp.position as Vec2d;
+		const map = engine.mapBuilder;
+		const tiles = map?.tiles;
+		if (!tiles || tiles.length === 0 || !mp) {
+			return;
+		}
+
+		const clamp = (v: number, min: number, max: number) =>
+			Math.max(min, Math.min(v, max));
+
+		const x = clamp(position.x, 0, map.width - 1);
+		const y = clamp(position.y, 0, map.height - 1);
+		let t = tiles[x]?.[y];
+
+		if (!t && engine.player?.position) {
+			const px = clamp(engine.player.position.x, 0, map.width - 1);
+			const py = clamp(engine.player.position.y, 0, map.height - 1);
+			t = tiles[px]?.[py];
+		}
+
+		setCurrentTile(t);
+	});
 
 	// Handle tab changes
 	createEffect(() => {
-		console.log(engine.mapBuilder.tiles[mousePosition().x][mousePosition().y]);
 		if (activeTab() === "close") {
 			engine.infoMenu.menuOff();
 		} else {
@@ -235,10 +262,14 @@ export default function Info({ engine }: { engine: Engine }) {
 
 			{/* Content area */}
 			<div class="border-2 border-white w-full flex-1 min-h-0 overflow-hidden">
-				{activeTab() === "info" && <InfoTab engine={engine} tile={tile} />}
-				{activeTab() === "stats" && <StatsTab engine={engine} tile={tile} />}
+				{activeTab() === "info" && (
+					<InfoTab engine={engine} tile={currentTile} />
+				)}
+				{activeTab() === "stats" && (
+					<StatsTab engine={engine} tile={currentTile} />
+				)}
 				{activeTab() === "timeline" && (
-					<TimelineTab engine={engine} tile={tile} />
+					<TimelineTab engine={engine} tile={currentTile} />
 				)}
 			</div>
 		</div>

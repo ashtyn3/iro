@@ -35,11 +35,15 @@ function createWindow(): void {
 	];
 	if (is.dev) {
 		template.push({
-			label: "DevTools",
+			label: "Debug",
 			submenu: [
 				{
 					label: "Toggle DevTools",
 					click: () => mainWindow.webContents.toggleDevTools(),
+				},
+				{
+					label: "Reload",
+					click: () => mainWindow.webContents.reloadIgnoringCache(),
 				},
 			],
 		});
