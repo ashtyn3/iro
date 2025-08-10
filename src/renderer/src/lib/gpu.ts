@@ -24,7 +24,6 @@ export class GPURenderer {
 	private cachedColorBuffer: GPUBuffer | null = null;
 	private colorCacheKey: string = "";
 	private cachedDevice: GPUDevice | null = null;
-    
 
 	async init() {
 		if (!navigator.gpu) {
@@ -58,7 +57,7 @@ export class GPURenderer {
 		return parseInt(hex.slice(1), 16);
 	}
 
-    private collectLightSources(_viewport: Vec2d): LightSource[] {
+	private collectLightSources(_viewport: Vec2d): LightSource[] {
 		const lightEmitters = EntityRegistry.instance.lookup([
 			LightEmitter,
 			Movable,
@@ -66,12 +65,12 @@ export class GPURenderer {
 		]);
 		const lights: LightSource[] = [];
 
-        for (const emitter of lightEmitters) {
-            const lightSource = emitter.getLightSource();
-            if (emitter.inViewportWR()) {
-                lights.push(lightSource);
-            }
-        }
+		for (const emitter of lightEmitters) {
+			const lightSource = emitter.getLightSource();
+			if (emitter.inViewportWR()) {
+				lights.push(lightSource);
+			}
+		}
 
 		return lights;
 	}
@@ -109,14 +108,19 @@ export class GPURenderer {
 		return buffer;
 	}
 
-	private createTileBuffer(tiles: Tile[][], viewport: Vec2d): GPUBuffer {
-		const data = new Uint32Array(VIEWPORT.x * VIEWPORT.y * 13);
+	private createTileBuffer(
+		tiles: Tile[][],
+		viewport: Vec2d,
+		width: number,
+		height: number,
+	): GPUBuffer {
+		const data = new Uint32Array(width * height * 13);
 
 		let i = 0;
 		const kindCounts: Record<number, number> = {};
 
-		for (let sy = 0; sy < VIEWPORT.y; sy++) {
-			for (let sx = 0; sx < VIEWPORT.x; sx++) {
+		for (let sy = 0; sy < height; sy++) {
+			for (let sx = 0; sx < width; sx++) {
 				const g_x = viewport.x + sx;
 				const g_y = viewport.y + sy;
 				const tile = tiles[g_x]?.[g_y];
@@ -264,13 +268,15 @@ export class GPURenderer {
 		playerY: number;
 		viewportX: number;
 		viewportY: number;
+		viewportWidth: number;
+		viewportHeight: number;
 		viewRadius: number;
 		lightCount: number;
 		yScale: number;
 	}): GPUBuffer {
-        const STEPS = GMap.DITHER_STEPS;
-        const DITHER_RADIUS = GMap.DITHER_RADIUS;
-        const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
+		const STEPS = GMap.DITHER_STEPS;
+		const DITHER_RADIUS = GMap.DITHER_RADIUS;
+		const SUPER_FAR_RADIUS = GMap.SUPER_FAR_RADIUS;
 
 		const paramsData = new ArrayBuffer(48);
 		const view = new DataView(paramsData);
@@ -279,13 +285,16 @@ export class GPURenderer {
 		view.setFloat32(4, params.playerY, true);
 		view.setInt32(8, params.viewportX, true);
 		view.setInt32(12, params.viewportY, true);
-		view.setUint32(16, VIEWPORT.x, true);
-		view.setUint32(20, VIEWPORT.y, true);
+		view.setUint32(16, params.viewportWidth, true);
+		view.setUint32(20, params.viewportHeight, true);
 		view.setFloat32(24, params.viewRadius, true);
 		view.setFloat32(28, DITHER_RADIUS, true);
-        // Ensure super-far radius is beyond view radius + dither to avoid negative ranges
-        const superFar = Math.max(SUPER_FAR_RADIUS, params.viewRadius + DITHER_RADIUS + 1);
-        view.setFloat32(32, superFar, true);
+		// Ensure super-far radius is beyond view radius + dither to avoid negative ranges
+		const superFar = Math.max(
+			SUPER_FAR_RADIUS,
+			params.viewRadius + DITHER_RADIUS + 1,
+		);
+		view.setFloat32(32, superFar, true);
 		view.setUint32(36, STEPS, true);
 		view.setUint32(40, params.lightCount, true);
 		view.setFloat32(44, params.yScale, true);
@@ -312,6 +321,9 @@ export class GPURenderer {
 		}
 
 		const viewportVec2d = Vec2d(viewport);
+		// Snapshot dynamic viewport dimensions once to avoid race with resizes
+		const vpWidth = VIEWPORT.x;
+		const vpHeight = VIEWPORT.y;
 
 		const lights = this.collectLightSources(viewportVec2d);
 
@@ -319,20 +331,27 @@ export class GPURenderer {
 		const colorBuffer = this.createColorBuffer();
 
 		// Now create tile buffer with proper colorKeyToIndex populated
-		const tileBuffer = this.createTileBuffer(tiles, viewportVec2d);
+		const tileBuffer = this.createTileBuffer(
+			tiles,
+			viewportVec2d,
+			vpWidth,
+			vpHeight,
+		);
 		const lightBuffer = this.createLightBuffer(lights);
 		const paramsBuffer = this.createParamsBuffer({
 			playerX: playerPos.x,
 			playerY: playerPos.y,
 			viewportX: viewport.x,
 			viewportY: viewport.y,
+			viewportWidth: vpWidth,
+			viewportHeight: vpHeight,
 			viewRadius,
 			lightCount: lights.length,
 			// scale dy by height/width so circles look round when cells are taller than wide
 			yScale: CELL_H_PX / CELL_W_PX,
 		});
 
-		const outputSize = VIEWPORT.x * VIEWPORT.y * 3 * 4;
+		const outputSize = vpWidth * vpHeight * 3 * 4;
 		const outputBuffer = this.device.createBuffer({
 			size: outputSize,
 			usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
@@ -360,8 +379,8 @@ export class GPURenderer {
 		passEncoder.setPipeline(this.pipeline);
 		passEncoder.setBindGroup(0, bindGroup);
 		passEncoder.dispatchWorkgroups(
-			Math.ceil(VIEWPORT.x / 8),
-			Math.ceil(VIEWPORT.y / 8),
+			Math.ceil(vpWidth / 8),
+			Math.ceil(vpHeight / 8),
 		);
 		passEncoder.end();
 
@@ -386,7 +405,7 @@ export class GPURenderer {
 			y: number;
 		}[] = [];
 
-		for (let i = 0; i < VIEWPORT.x * VIEWPORT.y; i++) {
+		for (let i = 0; i < vpWidth * vpHeight; i++) {
 			const charCode = results[i * 3];
 			const char = charCode === 0 ? " " : String.fromCharCode(charCode);
 			const fgInt = results[i * 3 + 1];
@@ -394,8 +413,8 @@ export class GPURenderer {
 				fgInt === 0 ? "#000000" : `#${fgInt.toString(16).padStart(6, "0")}`;
 			const bgInt = results[i * 3 + 2];
 			const bg = bgInt === 0 ? null : `#${bgInt.toString(16).padStart(6, "0")}`;
-			const x = i % VIEWPORT.x;
-			const y = Math.floor(i / VIEWPORT.x);
+			const x = i % vpWidth;
+			const y = Math.floor(i / vpWidth);
 
 			pixels.push({ char, fg, bg, x, y });
 		}

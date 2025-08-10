@@ -496,6 +496,23 @@ export class Engine {
 				centerFill: false,
 			},
 		);
+		const h = GenericMachine(
+			this,
+			Vec2d({ x: 20, y: 20 }),
+			Vec2d({ x: 5, y: 5 }),
+			{
+				corners: {
+					topLeft: "┌",
+					topRight: "┐",
+					bottomLeft: "└",
+					bottomRight: "┘",
+				},
+				horizontal: "─",
+				vertical: "│",
+				center: "o",
+				centerFill: false,
+			},
+		);
 		const d = DarkThing(this, Vec2d({ x: 10, y: 13 }));
 		const frame = async () => {
 			if (this.clockSystem.state === "paused") {

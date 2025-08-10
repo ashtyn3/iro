@@ -120,7 +120,7 @@ fn calculate_light_contribution(world_x: f32, world_y: f32, base_color: vec3<f32
     for (var i = 0u; i < params.light_count; i = i + 1u) {
         let light = light_sources[i];
         let light_dx = world_x - light.x;
-        let light_dy = world_y - light.y;
+        let light_dy = (world_y - light.y) * params.y_scale;
         let light_dist = sqrt(light_dx * light_dx + light_dy * light_dy);
         
         // Only apply light if within radius
