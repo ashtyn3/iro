@@ -1,6 +1,7 @@
 import type { Engine } from "..";
 import { EntityBuilder } from "../entity";
-import { createGObject } from "../object";
+import { type Cluster, TileKinds } from "../map";
+import { createGObject, Wall } from "../object";
 import { Syncable } from "../sync";
 import { Event, Renderable, secondsToFrames, Timed } from "../traits";
 import type { Vec2d } from "../types";
@@ -36,8 +37,25 @@ export const GenericMachine = (
 				console.log("generic_machine");
 			}),
 		)
+		.add(Wall, {})
 		.add(Renderable, () => {});
+
 	const built = ext.build();
+	const cluster: Cluster = {
+		kind: TileKinds.struct,
+		center: { x: 0, y: 0 },
+		points: [],
+	};
+	for (let i = 0; i < size.x; i++) {
+		for (let j = 0; j < size.y; j++) {
+			cluster.points.push({ x: built.position.x + i, y: built.position.y + j });
+		}
+	}
+	cluster.center = {
+		x: Math.floor(size.x / 2),
+		y: Math.floor(size.y / 2),
+	};
+	engine.mapBuilder.addCluster(cluster);
 	built.render = () => {
 		if (!built.inViewport()) {
 			return;

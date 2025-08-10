@@ -27,6 +27,16 @@ export const Unique: Component<Unique, {}> = (base) => {
 	return e;
 };
 
+export interface Wall extends Existable {
+	wall: boolean;
+}
+
+export const Wall: Component<Wall, {}> = (base) => {
+	const e = base as Entity & Wall;
+	e.wall = true;
+	return e;
+};
+
 export function createGObject(
 	e: Engine,
 	kind: string,

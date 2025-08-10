@@ -134,7 +134,7 @@ export class GMap {
 	storage: Storage;
 	saved: boolean;
 	writeQueue: TileUpdate[];
-	clusterQueue: { operation: "remove"; cluster: Cluster }[] = [];
+	clusterQueue: { operation: "remove" | "add"; cluster: Cluster }[] = [];
 	materials: Material[];
 	mapAreaKm2: number;
 	private queueFlushTimer: number | null = null;
@@ -255,7 +255,10 @@ export class GMap {
 			this.writeQueue = []; // Clear the queue immediately to accept new updates
 			this.clusterQueue = []; // Clear cluster queue
 			const failedUpdates: Array<{ x: number; y: number; tile: Tile }> = [];
-			const failedClusterOps: { operation: "remove"; cluster: Cluster }[] = [];
+			const failedClusterOps: {
+				operation: "remove" | "add";
+				cluster: Cluster;
+			}[] = [];
 
 			this.engine.debug.info(
 				`Processing ${queueToProcess.length} queued updates in batches of ${BATCH_SIZE}`,
@@ -286,6 +289,10 @@ export class GMap {
 					if (clusterOp.operation === "remove") {
 						await this.processClusterRemoval(clusterOp.cluster);
 						this.engine.debug.info(`Successfully processed cluster removal`);
+					}
+					if (clusterOp.operation === "add") {
+						await this.processClusterAddition(clusterOp.cluster);
+						this.engine.debug.info(`Successfully processed cluster addition`);
 					}
 				} catch (error) {
 					this.engine.debug.error(
@@ -1207,7 +1214,7 @@ export class GMap {
 		// 2. Remove all points from the lookup index
 		for (const p of clusterToRemove.points) {
 			const key = `${p.x},${p.y}`;
-			this.clusterIndex.delete(key);
+			this.clusterIndex?.delete(key);
 		}
 
 		// 3. Save the updated clusters object to the database
@@ -1218,14 +1225,42 @@ export class GMap {
 		);
 	}
 
+	private async processClusterAddition(clusterToAdd: Cluster): Promise<void> {
+		if (!clusterToAdd) return;
+		this.computedClusters[clusterToAdd.kind].push(clusterToAdd);
+		this.engine.debug.info(
+			`Added cluster of kind ${TileKinds[clusterToAdd.kind]} to memory.`,
+		);
+		const db = new DB(this.storage);
+		await db.updateClusters(this.mapId, this.computedClusters);
+
+		for (const pt of clusterToAdd.points) {
+			const key = `${pt.x},${pt.y}`;
+			this.clusterIndex?.set(key, clusterToAdd);
+		}
+
+		this.engine.debug.info(
+			`Updated clusters in database for mapId: ${this.mapId}`,
+		);
+	}
+
 	public queueClusterRemoval(clusterToRemove: Cluster): void {
 		this.clusterQueue.push({ operation: "remove", cluster: clusterToRemove });
+		this.scheduleAutoFlush();
+	}
+
+	public queueClusterAddition(clusterToAdd: Cluster): void {
+		this.clusterQueue.push({ operation: "add", cluster: clusterToAdd });
 		this.scheduleAutoFlush();
 	}
 
 	public async removeCluster(clusterToRemove: Cluster): Promise<void> {
 		// For backward compatibility, queue the removal instead of processing immediately
 		this.queueClusterRemoval(clusterToRemove);
+	}
+
+	public async addCluster(clusterToAdd: Cluster): Promise<void> {
+		this.queueClusterAddition(clusterToAdd);
 	}
 
 	private processChunkWithWorker(
