@@ -23,6 +23,7 @@ export interface Unique extends Existable {
 export const Unique: Component<Unique, {}> = (base) => {
 	const e = base as Entity & Unique;
 	e.id = crypto.randomUUID();
+	e._components = e._components.add(Symbol.for(e.id));
 	return e;
 };
 

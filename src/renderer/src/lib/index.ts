@@ -514,6 +514,7 @@ export class Engine {
 			},
 		);
 		const d = DarkThing(this, Vec2d({ x: 10, y: 13 }));
+
 		const frame = async () => {
 			if (this.clockSystem.state === "paused") {
 				requestAnimationFrame(frame);
