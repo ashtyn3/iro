@@ -326,11 +326,35 @@ export class Engine {
 		};
 
 		const fitCanvasToWindow = () => {
-			const CELL_W = measureGlyphWidth();
+			const gamebox = document.getElementById("gamebox");
+			const rect = gamebox?.getBoundingClientRect();
+			const availableW = Math.max(
+				1,
+				Math.floor(rect?.width ?? window.innerWidth),
+			);
+			const availableH = Math.max(
+				1,
+				Math.floor(rect?.height ?? window.innerHeight),
+			);
+
+			const computed = (this.display as any).computeSize
+				? (this.display as any).computeSize(availableW, availableH)
+				: [
+						Math.max(1, Math.floor(availableW / measureGlyphWidth())),
+						Math.max(
+							1,
+							Math.floor(
+								availableH / (this.display.getOptions().fontSize as number),
+							),
+						),
+					];
+			const cols = Math.max(1, computed[0] | 0);
+			const rows = Math.max(1, computed[1] | 0);
+
 			const CELL_H = this.display.getOptions().fontSize as number;
+			const CELL_W = measureGlyphWidth();
 			setCellMetrics(CELL_W, CELL_H);
-			let cols = Math.max(1, Math.floor(window.innerWidth / CELL_W));
-			const rows = Math.max(1, Math.floor(window.innerHeight / CELL_H));
+
 			setViewport(cols, rows);
 			this.display.setOptions({ width: cols, height: rows });
 
@@ -338,41 +362,27 @@ export class Engine {
 			const intrinsicCssWidth = canvas.width / dpr;
 			const intrinsicCssHeight = canvas.height / dpr;
 
-			let maxScaleXFloor =
-				Math.floor(window.innerWidth / intrinsicCssWidth) || 1;
-			let maxScaleYFloor =
-				Math.floor(window.innerHeight / intrinsicCssHeight) || 1;
-			const maxScaleXCeil =
-				Math.ceil(window.innerWidth / intrinsicCssWidth) || 1;
-			let scale = Math.max(1, Math.min(maxScaleXFloor, maxScaleYFloor));
+			const maxScaleX = Math.floor(availableW / intrinsicCssWidth) || 1;
+			const maxScaleY = Math.floor(availableH / intrinsicCssHeight) || 1;
+			const scale = Math.max(1, Math.min(maxScaleX, maxScaleY));
 
-			const desiredIntrinsicCssWidth = window.innerWidth / scale;
-			const additionalCols = Math.floor(
-				(desiredIntrinsicCssWidth - intrinsicCssWidth) / CELL_W,
+			const cssWidth = Math.min(
+				availableW,
+				Math.round(intrinsicCssWidth * scale),
 			);
-			if (additionalCols > 0) {
-				cols += additionalCols;
-				setViewport(cols, rows);
-				this.display.setOptions({ width: cols, height: rows });
-				const dpr2 = Math.max(1, Math.floor(window.devicePixelRatio || 1));
-				const intrinsicCssWidth2 = canvas.width / dpr2;
-				const intrinsicCssHeight2 = canvas.height / dpr2;
-				maxScaleXFloor =
-					Math.floor(window.innerWidth / intrinsicCssWidth2) || 1;
-				maxScaleYFloor =
-					Math.floor(window.innerHeight / intrinsicCssHeight2) || 1;
-				scale = Math.max(1, Math.min(maxScaleXFloor, maxScaleYFloor));
-			}
-
-			const cssWidth = Math.round((canvas.width / dpr) * scale);
-			const cssHeight = Math.round((canvas.height / dpr) * scale);
+			const cssHeight = Math.min(
+				availableH,
+				Math.round(intrinsicCssHeight * scale),
+			);
 
 			canvas.style.width = `${cssWidth}px`;
 			canvas.style.height = `${cssHeight}px`;
+			canvas.style.margin = "0 auto";
 		};
 
 		fitCanvasToWindow();
 		window.addEventListener("resize", fitCanvasToWindow);
+		document.fonts?.ready?.then?.(() => fitCanvasToWindow());
 
 		this.engine.lock();
 		this.engine.start();

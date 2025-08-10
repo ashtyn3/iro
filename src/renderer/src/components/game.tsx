@@ -1,5 +1,4 @@
 import {
-	createComputed,
 	createEffect,
 	createMemo,
 	createSignal,
@@ -7,12 +6,11 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { effect } from "solid-js/web";
 import type { Engine } from "~/lib";
 import { Debug } from "~/lib/debug";
 import type { Item, MenuHolder } from "~/lib/inventory";
 import type { PlayerType } from "~/lib/player";
-import InventoryViewer from "./inventoryView";
+//
 
 export function Inventory({ engine }: { engine: Engine }) {
 	const itemArray = (): { count: number; item: Item }[] =>
@@ -95,19 +93,19 @@ export default function Game({ engine }: { engine: Engine }) {
 		const menu = () => engine.menuHolder.value() as MenuHolder;
 		const messageMenu = () => engine.messageMenu.value() as MenuHolder;
 		const infoMenu = () => engine.infoMenu.value() as MenuHolder;
-		const isSaving = createMemo(() => engine.mapBuilder.isFlushingQueue);
+		// const isSaving = createMemo(() => engine.mapBuilder.isFlushingQueue);
 
 		return (
 			<div class="w-full h-full bg-black flex flex-col">
 				<SaveIndicator engine={engine} />
 				{menu().Menu()}
-				<div class="flex flex-row justify-between items-center shrink-0">
+				<div id="hud-top" class="flex flex-row justify-between px-3 py-2">
 					<p>{player().air}% Air</p>
 					<HealthBar engine={engine} />
 					<Inventory engine={engine} />
 				</div>
 				<div id="gamebox" class="flex-1 min-h-0 overflow-hidden"></div>
-				<div class="flex flex-row gap-2 justify-center m-5 shrink-0">
+				<div id="hud-bottom" class="flex flex-row gap-2 justify-center m-5">
 					<div class="border-2 border-white">
 						<img
 							src={player().hands.left.sprite[0]}
